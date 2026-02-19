@@ -139,7 +139,7 @@ interface SectionHeaderProps {
 const SectionHeader = ({ left, right }:SectionHeaderProps) => (
   <div className="flex justify-between items-center border-b border-border pb-2">
     <h2 className="text-lg font-semibold text-foreground underline">{left}</h2>
-    <h2 className="text-lg font-semibold text-foreground" dir="rtl">
+    <h2 className="text-lg font-semibold text-foreground underline" dir="rtl">
       {right}
     </h2>
   </div>
