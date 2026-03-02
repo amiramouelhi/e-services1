@@ -1,0 +1,92 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Categorie {
+  id      Int    @id @default(autoincrement())
+  code    Int    @unique
+  nom_fr  String
+  nom_ar  String
+
+  depots  Depot[]
+}
+
+model Deposant {
+  id           Int     @id @default(autoincrement())
+  nomComplet_fr String?
+  nomComplet_ar String?
+  cin           String? @unique
+  raisonSociale String? @unique
+  registreCommerce String?
+  adresse_fr    String?
+  adresse_ar    String?
+  telephone     String? 
+  fax           String?
+  email         String?
+
+  depots        Depot[]
+}
+
+model Auteur {
+  id           Int    @id @default(autoincrement())
+  nomComplet_fr String?
+  nomComplet_ar String?
+
+  depotAuteurs DepotAuteur[]
+}
+
+model Oeuvre {
+  id             Int     @id @default(autoincrement())
+  titre_fr       String?
+  titre_ar       String?
+  typeSupport_fr String?
+  typeSupport_ar String?
+
+  depots         Depot[]
+}
+
+model Depot {
+  id                         Int       @id @default(autoincrement())
+  numeroSequentiel           Int?
+  numeroEnregistrementBureau String?
+  numeroRegistreInterne      String?
+  dateDepot                  DateTime
+  numeroRecuPaiement         String?
+  montant                    Decimal
+  numeroCertificat           String?
+  dateEmissionCertificat     DateTime?
+  dateReceptionCertificat    DateTime?
+  dateCreation               DateTime  @default(now())
+
+  categorieId Int
+  categorie   Categorie @relation(fields: [categorieId], references: [id])
+
+  deposantId Int
+  deposant   Deposant  @relation(fields: [deposantId], references: [id])
+
+  oeuvreId Int
+  oeuvre   Oeuvre    @relation(fields: [oeuvreId], references: [id])
+
+  auteurs DepotAuteur[]
+}
+
+model DepotAuteur {
+  depotId  Int
+  auteurId Int
+
+  depot  Depot  @relation(fields: [depotId], references: [id], onDelete: Cascade)
+  auteur Auteur @relation(fields: [auteurId], references: [id], onDelete: Cascade)
+
+  @@id([depotId, auteurId])
+}
