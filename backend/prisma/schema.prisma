@@ -14,12 +14,12 @@ datasource db {
 }
 
 model Categorie {
-  id      Int    @id @default(autoincrement())
-  code    Int    @unique
-  nom_fr  String
-  nom_ar  String
+  id     Int      @id @default(autoincrement())
+  code   Int      @unique
+  nom_fr String
+  nom_ar String
 
-  depots  Depot[]
+  oeuvres Oeuvre[]
 }
 
 model Deposant {
@@ -47,11 +47,15 @@ model Auteur {
 }
 
 model Oeuvre {
-  id             Int     @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   titre_fr       String?
   titre_ar       String?
+  description_fr String?
+  description_ar String?
   typeSupport_fr String?
   typeSupport_ar String?
+  categorieId    Int
+  categorie      Categorie @relation(fields: [categorieId], references: [id])
 
   depots         Depot[]
 }
@@ -69,14 +73,12 @@ model Depot {
   dateReceptionCertificat    DateTime?
   dateCreation               DateTime  @default(now())
 
-  categorieId Int
-  categorie   Categorie @relation(fields: [categorieId], references: [id])
 
   deposantId Int
-  deposant   Deposant  @relation(fields: [deposantId], references: [id])
+  deposant   Deposant @relation(fields: [deposantId], references: [id])
 
   oeuvreId Int
-  oeuvre   Oeuvre    @relation(fields: [oeuvreId], references: [id])
+  oeuvre   Oeuvre @relation(fields: [oeuvreId], references: [id])
 
   auteurs DepotAuteur[]
 }

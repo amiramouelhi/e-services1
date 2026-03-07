@@ -3,6 +3,8 @@ const cors = require("cors");
 const prisma = require("./config/prisma");
 const categorieRoutes=require("./routes/categorie.routes");
 const deposantRoutes=require("./routes/deposant.routes");
+const auteurRoutes = require("./routes/auteur.route");
+const oeuvreRoutes = require("./routes/oeuvre.route");
 const app = express();
 
 app.use(cors());
@@ -23,6 +25,6 @@ app.get("/", (req, res) => {
 
 app.use("/categories",categorieRoutes);
 app.use("/deposants",deposantRoutes);
-
-
+app.use("/auteurs", auteurRoutes);
+app.use("/oeuvres", oeuvreRoutes);
 module.exports = app;
