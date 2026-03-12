@@ -20,6 +20,13 @@ exports.createDepot = async (req, res) => {
       numeroRecuPaiement,
     } = req.body;
 
+    // Read uploaded files (comes from multer not req.body)
+    const fichierCIN             = req.files?.fichierCIN?.[0]?.filename || null;
+    const fichierRNE             = req.files?.fichierRNE?.[0]?.filename || null;
+    const fichierProcuration     = req.files?.fichierProcuration?.[0]?.filename || null;
+    const fichierDossierJuridique = req.files?.fichierDossierJuridique?.[0]?.filename || null;
+    const typeDeposant           = req.body.typeDeposant || null;
+
     // Validations
     if (!nomComplet?.trim() && !raisonSociale?.trim())
       return res.status(400).json({ error: "Nom du déposant est obligatoire" });
@@ -46,16 +53,21 @@ exports.createDepot = async (req, res) => {
 
       const deposant = await tx.deposant.create({
         data: {
-          nomComplet_fr:    isArabicNom     ? null : nomComplet?.trim(),
-          nomComplet_ar:    isArabicNom     ? nomComplet?.trim() : null,
-          adresse_fr:       isArabicAdresse ? null : adresse?.trim(),
-          adresse_ar:       isArabicAdresse ? adresse?.trim() : null,
-          cin:              cin?.trim()              || null,
-          raisonSociale:    raisonSociale?.trim()    || null,
-          registreCommerce: registreCommerce?.trim() || null,
-          telephone:        telephone?.trim(),
-          fax:              fax?.trim()              || null,
-          email:            email?.trim()            || null,
+    nomComplet_fr:          isArabicNom     ? null : nomComplet?.trim(),
+    nomComplet_ar:          isArabicNom     ? nomComplet?.trim() : null,
+    adresse_fr:             isArabicAdresse ? null : adresse?.trim(),
+    adresse_ar:             isArabicAdresse ? adresse?.trim() : null,
+    cin:                    cin?.trim()              || null,
+    raisonSociale:          raisonSociale?.trim()    || null,
+    registreCommerce:       registreCommerce?.trim() || null,
+    telephone:              telephone?.trim(),
+    fax:                    fax?.trim()              || null,
+    email:                  email?.trim()            || null,
+    typeDeposant,
+    fichierCIN,
+    fichierRNE,
+    fichierProcuration,
+    fichierDossierJuridique,
         }
       });
 
@@ -178,6 +190,64 @@ exports.deleteDepot = async (req, res) => {
 
     await prisma.depot.delete({ where: { id } });
     res.json({ message: "Dépôt supprimé avec succès" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// GET only the logged-in user's depots
+exports.getMesDepots = async (req, res) => {
+  try {
+    const depots = await prisma.depot.findMany({
+      where: { userId: req.userId },
+      orderBy: { dateCreation: "desc" },
+      include: {
+        oeuvre: { include: { categorie: true } },
+        auteurs: { include: { auteur: true } },
+        deposant: true,
+      }
+    });
+    res.json(depots);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ACCEPT a depot
+exports.accepterDepot = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+
+    const depot = await prisma.depot.update({
+      where: { id },
+      data: { statut: "ACCEPTE" }
+    });
+    res.json(depot);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// REJECT a depot
+exports.rejeterDepot = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+
+    const { motifRejet } = req.body;
+    if (!motifRejet?.trim()) {
+      return res.status(400).json({ error: "Le motif de rejet est obligatoire" });
+    }
+
+    const depot = await prisma.depot.update({
+      where: { id },
+      data: {
+        statut: "REJETE",
+        motifRejet: motifRejet.trim()
+      }
+    });
+    res.json(depot);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

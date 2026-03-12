@@ -8,8 +8,10 @@ datasource db {
 }
 
 enum Statut {
-  EN_ATTENTE
-  PAYE
+  EN_ATTENTE   
+  ACCEPTE      
+  REJETE      
+  PAYE         
   CERTIFIE
 }
 
@@ -49,6 +51,11 @@ model Deposant {
   telephone        String?
   fax              String?
   email            String?
+  fichierCIN             String?
+  fichierRNE             String?
+  fichierProcuration     String?
+  fichierDossierJuridique String?
+  typeDeposant           String?  // "PHYSIQUE" or "MORALE"
 
   depots           Depot[]
 }
@@ -75,6 +82,7 @@ model Oeuvre {
   depots         Depot[]
 }
 
+
 model Depot {
   id                         Int       @id @default(autoincrement())
   numeroSequentiel           Int?
@@ -89,6 +97,7 @@ model Depot {
   dateCreation               DateTime  @default(now())
   statut                     Statut    @default(EN_ATTENTE)
   konnectPaymentRef          String?
+  motifRejet      String?
 
   userId     Int
   user       User     @relation(fields: [userId], references: [id])
@@ -98,7 +107,7 @@ model Depot {
 
   oeuvreId   Int
   oeuvre     Oeuvre   @relation(fields: [oeuvreId], references: [id])
-
+  
   auteurs    DepotAuteur[]
 }
 
