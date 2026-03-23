@@ -17,8 +17,6 @@ router.post("/", authMiddleware, uploadFields, controller.createDepot);
 router.get("/",                 authMiddleware, controller.getAllDepots);
 router.get("/mes-depots",       authMiddleware, controller.getMesDepots);
 router.get("/:id",              authMiddleware, controller.getDepotById);
-router.put("/:id/accepter",     authMiddleware, controller.accepterDepot);
-router.put("/:id/rejeter",      authMiddleware, controller.rejeterDepot);
 router.delete("/:id",           authMiddleware, controller.deleteDepot);
 
 module.exports = router;

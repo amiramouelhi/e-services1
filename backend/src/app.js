@@ -7,6 +7,7 @@ const auteurRoutes = require("./routes/auteur.route");
 const oeuvreRoutes = require("./routes/oeuvre.route");
 const authRoutes = require("./routes/auth.routes");
 const depotRoutes = require("./routes/depot.routes");
+const adminRoutes = require("./routes/admin.routes");
 const app = express();
 const path = require("path");
 app.use(cors());
@@ -18,7 +19,7 @@ app.get("/", (req, res) => {
 });
 
 
-
+app.use("/admin", adminRoutes);
 app.use("/categories",categorieRoutes);
 app.use("/deposants",deposantRoutes);
 app.use("/auteurs", auteurRoutes);

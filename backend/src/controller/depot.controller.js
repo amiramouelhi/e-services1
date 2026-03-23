@@ -4,7 +4,7 @@ const prisma = require("../config/prisma");
 exports.createDepot = async (req, res) => {
   try {
     const userId = req.userId;
-
+    // console.log("=== body ===", req.body)
     const {
       // Deposant info
       nomComplet, cin, raisonSociale, registreCommerce,
@@ -26,7 +26,7 @@ exports.createDepot = async (req, res) => {
     const fichierProcuration     = req.files?.fichierProcuration?.[0]?.filename || null;
     const fichierDossierJuridique = req.files?.fichierDossierJuridique?.[0]?.filename || null;
     const typeDeposant           = req.body.typeDeposant || null;
-
+  
     // Validations
     if (!nomComplet?.trim() && !raisonSociale?.trim())
       return res.status(400).json({ error: "Nom du déposant est obligatoire" });
@@ -132,6 +132,7 @@ exports.createDepot = async (req, res) => {
     });
 
     res.status(201).json(depot);
+    
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -208,46 +209,6 @@ exports.getMesDepots = async (req, res) => {
       }
     });
     res.json(depots);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// ACCEPT a depot
-exports.accepterDepot = async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
-
-    const depot = await prisma.depot.update({
-      where: { id },
-      data: { statut: "ACCEPTE" }
-    });
-    res.json(depot);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// REJECT a depot
-exports.rejeterDepot = async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
-
-    const { motifRejet } = req.body;
-    if (!motifRejet?.trim()) {
-      return res.status(400).json({ error: "Le motif de rejet est obligatoire" });
-    }
-
-    const depot = await prisma.depot.update({
-      where: { id },
-      data: {
-        statut: "REJETE",
-        motifRejet: motifRejet.trim()
-      }
-    });
-    res.json(depot);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

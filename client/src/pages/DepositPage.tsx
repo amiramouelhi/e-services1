@@ -639,7 +639,6 @@ const DepositPage = () => {
   );
 };
 
-/* --- Sub-components --- */
 
 interface SectionHeaderProps {
   letter: string;

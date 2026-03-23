@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 215 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    --primary: 215 60% 22%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 20% 95%;
+    --secondary-foreground: 215 25% 15%;
+
+    --muted: 210 15% 93%;
+    --muted-foreground: 215 10% 45%;
+
+    --accent: 210 30% 90%;
+    --accent-foreground: 215 60% 22%;
+
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 20% 85%;
+    --input: 214 20% 80%;
+    --ring: 215 60% 22%;
+
+    --radius: 0.5rem;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  input, textarea, select {
+    font-family: inherit;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+}
+
+@layer components {
+  .input-field {
+    width: 100%;
+    border: 1px solid hsl(var(--input));
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    background: white;
+    color: hsl(var(--foreground));
+    outline: none;
+    transition: all 0.15s ease;
+  }
+
+  .input-field::placeholder {
+    color: hsl(var(--muted-foreground) / 0.6);
+  }
+
+  .input-field:focus {
+    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.25);
+    border-color: hsl(var(--primary));
+  }
+
+  .input-field:hover:not(:focus) {
+    border-color: hsl(var(--primary) / 0.35);
+  }
+
+  .btn-primary {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-radius: 0.5rem;
+    padding: 0.625rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-primary:hover {
+    background: hsl(215 60% 28%);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .paper-form {
+    background: white;
+    border-radius: 0.75rem;
+    border: 1px solid hsl(var(--border));
+    box-shadow:
+      0 1px 3px 0 rgb(0 0 0 / 0.06),
+      0 4px 6px -2px rgb(0 0 0 / 0.03);
+  }
+}

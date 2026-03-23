@@ -2,8 +2,11 @@ const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient()
 
+
 async function main() {
+  //seed categories
   await prisma.categorie.createMany({
+    skipDuplicates: true,
     data: [
       {
         code: 1,
@@ -88,8 +91,25 @@ async function main() {
     ]
   })
 
-  console.log('✅ Categories seeded successfully')
+  console.log(' Categories seeded successfully')
+  //seed admin
+  const bcrypt = require("bcrypt")
+
+const existingAdmin = await prisma.admin.findUnique({
+  where: { email: "admin@otdav.tn" }
+})
+
+if (!existingAdmin) {
+  await prisma.admin.create({
+    data: {
+      email: "admin@otdav.tn",
+      password: await bcrypt.hash("Admin@2026", 10)
+    }
+  })
+  console.log(" Admin seeded successfully")
 }
+}
+
 
 main()
   .catch(console.error)
