@@ -8,7 +8,7 @@ exports.createDepot = async (req, res) => {
     const {
       // Deposant info
       nomComplet, cin, raisonSociale, registreCommerce,
-      adresse, telephone, fax, email,
+      rue, cite, gouvernorat, ville, codePostal, telephone, fax, email,
       // Oeuvre info
       titre, description, typeSupport, categorieId,
       auteurs,
@@ -17,7 +17,7 @@ exports.createDepot = async (req, res) => {
       numeroSequentiel,
       numeroEnregistrementBureau,
       numeroRegistreInterne,
-      numeroRecuPaiement,
+      numeroRecuPaiement,isAuteur, isNon, isCoAuteur
     } = req.body;
 
     // Read uploaded files (comes from multer not req.body)
@@ -55,8 +55,11 @@ exports.createDepot = async (req, res) => {
         data: {
     nomComplet_fr:          isArabicNom     ? null : nomComplet?.trim(),
     nomComplet_ar:          isArabicNom     ? nomComplet?.trim() : null,
-    adresse_fr:             isArabicAdresse ? null : adresse?.trim(),
-    adresse_ar:             isArabicAdresse ? adresse?.trim() : null,
+    rue:         rue?.trim()         || null,
+    cite:        cite?.trim()        || null,
+    gouvernorat: gouvernorat?.trim() || null,
+    ville:       ville?.trim()       || null,
+    codePostal:  codePostal?.trim()  || null,
     cin:                    cin?.trim()              || null,
     raisonSociale:          raisonSociale?.trim()    || null,
     registreCommerce:       registreCommerce?.trim() || null,
@@ -68,6 +71,9 @@ exports.createDepot = async (req, res) => {
     fichierRNE,
     fichierProcuration,
     fichierDossierJuridique,
+        isAuteur:   isAuteur === 'true' || isAuteur === true,
+    isNon:      isNon === 'true' || isNon === true,
+    isCoAuteur: isCoAuteur === 'true' || isCoAuteur === true,
         }
       });
 

@@ -52,15 +52,21 @@ const LoginPage = () => {
           style={{ background: "hsl(215 60% 70%)" }}
         />
 
-        <div className="relative z-10 text-center px-8">
-          <div className="mb-8 bg-white/10 backdrop-blur-sm rounded-2xl p-6 inline-block">
-            <img src={otdavLogo} alt="OTDAV Logo" className="w-28 h-auto mx-auto" />
-          </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">App-Depot</h1>
-          <div className="w-12 h-0.5 bg-white/30 mx-auto my-4" />
-          <p className="text-base text-white/70 max-w-xs mx-auto leading-relaxed">
+        <div className="absolute top-8 left-0 right-0 z-10 text-center px-8">
+          <p className="text-white font-medium mb-1" style={{ fontSize: "16px" }}>
+            المؤسسة التونسية لحقوق المؤلف والحقوق المجاورة
+          </p>
+          <p className="text-white/60" style={{ fontSize: "13px" }}>
             Organisme Tunisien des Droits d'Auteur et des Droits Voisins
           </p>
+        </div>
+
+        <div className="relative z-10 text-center px-8">
+          <div className="mb-6 bg-white/10 backdrop-blur-sm rounded-2xl p-6 inline-block">
+            <img src={otdavLogo} alt="OTDAV Logo" className="w-28 h-auto mx-auto" />
+          </div>
+          <div className="w-12 h-0.5 bg-white/30 mx-auto my-4" />
+          <h1 className="text-3xl font-bold text-white tracking-tight">OTDAV Connect</h1>
         </div>
       </div>
 
@@ -70,13 +76,13 @@ const LoginPage = () => {
           {/* Mobile logo */}
           <div className="md:hidden text-center mb-10">
             <img src={otdavLogo} alt="OTDAV Logo" className="w-20 h-auto mx-auto mb-3" />
-            <h1 className="text-xl font-bold text-foreground">App-Depot</h1>
+            <h1 className="text-xl font-bold text-foreground">OTDAV Connect</h1>
             <p className="text-sm text-muted-foreground">OTDAV</p>
           </div>
 
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-foreground tracking-tight">
-              Connexion
+              Connexion / تسجيل الدخول
             </h2>
             <p className="text-sm text-muted-foreground mt-2">
               Accédez à votre espace de dépôt
@@ -96,7 +102,7 @@ const LoginPage = () => {
             )}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
-                Identifiant
+                Adresse e-mail / البريد الإلكتروني
               </label>
               <input
                 type="text"
@@ -108,7 +114,7 @@ const LoginPage = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
-                Mot de passe
+                Mot de passe / كلمة المرور
               </label>
               <input
                 type="password"
@@ -123,14 +129,14 @@ const LoginPage = () => {
               disabled={submitting}
               className="btn-primary w-full py-3 text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {submitting ? "Connexion en cours..." : "Se connecter"}
+              {submitting ? "Connexion en cours..." : "Se connecter / دخول"}
             </button>
           </form>
 
           <p className="text-sm text-muted-foreground text-center mt-6">
-            Pas encore de compte ?{" "}
+            Pas encore de compte ? S'inscrire / ليس لديك حساب؟{" "}
             <Link to="/register" className="text-primary font-medium hover:underline">
-              S'inscrire
+              سجل الآن
             </Link>
           </p>
 

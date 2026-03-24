@@ -1,5 +1,5 @@
 function errorHandler(err, req, res, next) {
-  console.error(err) // log the real error in terminal only
+  console.error(err) 
 
   // Prisma unique constraint
   if (err.code === 'P2002') {

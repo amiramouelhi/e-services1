@@ -46,8 +46,11 @@ model Deposant {
   cin              String? @unique
   raisonSociale    String? @unique
   registreCommerce String?
-  adresse_fr       String?
-  adresse_ar       String?
+  rue          String?
+  cite         String?
+  gouvernorat  String?
+  ville        String?
+  codePostal   String?
   telephone        String?
   fax              String?
   email            String?
@@ -56,7 +59,9 @@ model Deposant {
   fichierProcuration     String?
   fichierDossierJuridique String?
   typeDeposant           String?  // "PHYSIQUE" or "MORALE"
-
+  isAuteur    Boolean? @default(false)
+  isNon       Boolean? @default(false)
+  isCoAuteur  Boolean? @default(false)
   depots           Depot[]
 }
 

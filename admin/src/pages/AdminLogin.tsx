@@ -48,15 +48,21 @@ const AdminLogin = () => {
           style={{ background: "hsl(215 60% 70%)" }}
         />
 
-        <div className="relative z-10 text-center px-8">
-          <div className="mb-8 bg-white/10 backdrop-blur-sm rounded-2xl p-6 inline-block">
-            <img src={otdavLogo} alt="OTDAV Logo" className="w-28 h-auto mx-auto" />
-          </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Administration</h1>
-          <div className="w-12 h-0.5 bg-white/30 mx-auto my-4" />
-          <p className="text-base text-white/70 max-w-xs mx-auto leading-relaxed">
+        <div className="absolute top-8 left-0 right-0 z-10 text-center px-8">
+          <p className="text-white font-medium mb-1" style={{ fontSize: "16px" }}>
+            المؤسسة التونسية لحقوق المؤلف والحقوق المجاورة
+          </p>
+          <p className="text-white/60" style={{ fontSize: "13px" }}>
             Organisme Tunisien des Droits d'Auteur et des Droits Voisins
           </p>
+        </div>
+
+        <div className="relative z-10 text-center px-8">
+          <div className="mb-6 bg-white/10 backdrop-blur-sm rounded-2xl p-6 inline-block">
+            <img src={otdavLogo} alt="OTDAV Logo" className="w-28 h-auto mx-auto" />
+          </div>
+          <div className="w-12 h-0.5 bg-white/30 mx-auto my-4" />
+          <h1 className="text-3xl font-bold text-white tracking-tight">OTDAV Connect</h1>
         </div>
       </div>
 
@@ -70,7 +76,7 @@ const AdminLogin = () => {
           <div className="md:hidden text-center mb-10">
             <img src={otdavLogo} alt="OTDAV Logo" className="w-20 h-auto mx-auto mb-3" />
             <h1 className="text-xl font-bold" style={{ color: "hsl(var(--foreground))" }}>
-              OTDAV Admin
+              OTDAV Connect
             </h1>
             <p className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
               Panneau d'administration
@@ -79,7 +85,7 @@ const AdminLogin = () => {
 
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold tracking-tight" style={{ color: "hsl(var(--foreground))" }}>
-              Connexion Admin
+              Connexion / تسجيل الدخول
             </h2>
             <p className="text-sm mt-2" style={{ color: "hsl(var(--muted-foreground))" }}>
               Accedez au panneau d'administration
@@ -104,7 +110,7 @@ const AdminLogin = () => {
                 className="block text-sm font-medium mb-1.5"
                 style={{ color: "hsl(var(--foreground))" }}
               >
-                Email
+                Adresse e-mail / البريد الإلكتروني
               </label>
               <input
                 type="email"
@@ -120,7 +126,7 @@ const AdminLogin = () => {
                 className="block text-sm font-medium mb-1.5"
                 style={{ color: "hsl(var(--foreground))" }}
               >
-                Mot de passe
+                Mot de passe / كلمة المرور
               </label>
               <input
                 type="password"
@@ -136,7 +142,7 @@ const AdminLogin = () => {
               disabled={loading}
               className="btn-primary w-full py-3 text-base mt-2"
             >
-              {loading ? "Connexion en cours..." : "Se connecter"}
+              {loading ? "Connexion en cours..." : "Se connecter / دخول"}
             </button>
           </form>
 
