@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 interface Depot {
   id: number;
   dateDepot: string;
-  statut: "EN_ATTENTE" | "ACCEPTE" | "REJETE" | "PAYE" | "CERTIFIE";
+  statut: string;
   typeDeposant: "PHYSIQUE" | "MORALE";
   deposant: {
     nomComplet_fr: string | null;
@@ -18,23 +18,17 @@ interface Depot {
   };
 }
 
-type StatutKey = Depot["statut"];
-
-const statCards: { key: StatutKey | "ALL"; label: string; color: string }[] = [
-  { key: "ALL",        label: "Total depots", color: "#1a3c6e" },
-  { key: "EN_ATTENTE", label: "En attente",   color: "#f59e0b" },
-  { key: "ACCEPTE",    label: "Acceptes",     color: "#10b981" },
-  { key: "REJETE",     label: "Rejetes",      color: "#ef4444" },
-  { key: "PAYE",       label: "Payes",        color: "#3b82f6" },
-  { key: "CERTIFIE",   label: "Certifies",    color: "#8b5cf6" },
+const statCards: { key: string; label: string; color: string }[] = [
+  { key: "ALL",        label: "Total dépôts",         color: "#1a3c6e" },
+  { key: "CERTIFIE",   label: "Certifiés",            color: "#10b981" },
+  { key: "EN_ATTENTE_RENOUVELLEMENT", label: "Renouvellement requis", color: "#f97316" },
+  { key: "EN_ATTENTE", label: "En cours",             color: "#6b7280" },
 ];
 
-const statutBadge: Record<StatutKey, { label: string; bg: string; text: string }> = {
-  EN_ATTENTE: { label: "En attente", bg: "bg-yellow-50 border-yellow-300", text: "text-yellow-700" },
-  ACCEPTE:    { label: "Accepte",    bg: "bg-green-50 border-green-300",   text: "text-green-700" },
-  REJETE:     { label: "Rejete",     bg: "bg-red-50 border-red-300",       text: "text-red-700" },
-  PAYE:       { label: "Paye",       bg: "bg-blue-50 border-blue-300",     text: "text-blue-700" },
-  CERTIFIE:   { label: "Certifie",   bg: "bg-purple-50 border-purple-300", text: "text-purple-700" },
+const statutBadge: Record<string, { label: string; bg: string; text: string }> = {
+  CERTIFIE:   { label: "Certifié",              bg: "bg-green-50 border-green-300",  text: "text-green-700" },
+  EN_ATTENTE_RENOUVELLEMENT: { label: "Renouvellement requis", bg: "bg-orange-50 border-orange-300", text: "text-orange-700" },
+  EN_ATTENTE: { label: "En cours",              bg: "bg-gray-50 border-gray-300",    text: "text-gray-700" },
 };
 
 const MONTHS = [
@@ -182,7 +176,7 @@ const DashboardHome = () => {
                     </tr>
                   )}
                   {recentDepots.map((depot) => {
-                    const badge = statutBadge[depot.statut];
+                    const badge = statutBadge[depot.statut] || { label: "En cours", bg: "bg-gray-50 border-gray-300", text: "text-gray-700" };
                     return (
                       <tr
                         key={depot.id}

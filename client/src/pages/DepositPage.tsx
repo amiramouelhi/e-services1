@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { GOUVERNORATS_DATA } from "./gouvernoratsData";
 
 interface Category {
   id: number;
@@ -17,7 +18,11 @@ interface FormState {
   cin: string;
   raisonSociale: string;
   registreCommerce: string;
-  adresse: string;
+  rue: string;
+  cite: string;
+  gouvernorat: string;
+  delegation: string;
+  codePostal: string;
   telephone: string;
   fax: string;
   email: string;
@@ -38,7 +43,11 @@ const initialForm: FormState = {
   cin: "",
   raisonSociale: "",
   registreCommerce: "",
-  adresse: "",
+  rue: "",
+  cite: "",
+  gouvernorat: "",
+  delegation: "",
+  codePostal: "",
   telephone: "",
   fax: "",
   email: "",
@@ -62,7 +71,11 @@ const translations = {
     cin: "بطاقة التعريف",
     raisonSociale: "الإسم الجماعي",
     registreCommerce: "رقم السجل التجاري",
-    adresse: "العنوان البريدي",
+    rue: "الشارع",
+    cite: "الحي",
+    gouvernorat: "الولاية",
+    delegation: "المعتمدية",
+    codePostal: "الرمز البريدي",
     telephone: "رقم الهاتف",
     fax: "رقم الفاكس",
     email: "البريد الإلكتروني",
@@ -104,6 +117,9 @@ const translations = {
     authorStatusError: "يرجى تحديد صفتك كمؤلف",
     errRequired: "هذا الحقل مطلوب",
     errCin: "بطاقة التعريف يجب أن تحتوي على 8 أرقام",
+    errCodePostal: "الرمز البريدي يجب أن يحتوي على 4 أرقام",
+    selectGouvernorat: "-- اختر الولاية --",
+    selectDelegation: "-- اختر المعتمدية --",
     errTelephone: "رقم الهاتف يجب أن يحتوي على 8 أرقام",
     errEmail: "البريد الإلكتروني غير صحيح",
     errFichierCIN: "ملف بطاقة التعريف مطلوب",
@@ -119,7 +135,11 @@ const translations = {
     cin: "Piece d'identite",
     raisonSociale: "Raison sociale",
     registreCommerce: "Registre de commerce",
-    adresse: "Adresse postale",
+    rue: "Rue",
+    cite: "Cité",
+    gouvernorat: "Gouvernorat",
+    delegation: "Délégation",
+    codePostal: "Code postal",
     telephone: "Telephone",
     fax: "Fax",
     email: "E-mail",
@@ -138,7 +158,7 @@ const translations = {
     documents: "Documents a joindre",
     next: "Suivant",
     prev: "Precedent",
-    submit: "Soumettre",
+    submit: "Valider",
     submitting: "Envoi en cours...",
     sectionA: "Le deposant",
     sectionB: "L'oeuvre",
@@ -161,6 +181,9 @@ const translations = {
     authorStatusError: "Veuillez selectionner votre statut d'auteur",
     errRequired: "Ce champ est obligatoire",
     errCin: "La CIN doit contenir exactement 8 chiffres",
+    errCodePostal: "Le code postal doit contenir exactement 4 chiffres",
+    selectGouvernorat: "-- Sélectionner un gouvernorat --",
+    selectDelegation: "-- Sélectionner une délégation --",
     errTelephone: "Le telephone doit contenir exactement 8 chiffres",
     errEmail: "L'adresse e-mail n'est pas valide",
     errFichierCIN: "Fichier CIN obligatoire",
@@ -187,6 +210,8 @@ const DepositPage = () => {
   const [isOui, setIsOui] = useState(false);
   const [isNon, setIsNon] = useState(false);
   const [isCoAuteur, setIsCoAuteur] = useState(false);
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+  const [auteursCIN, setAuteursCIN] = useState<string[]>([""]);
 
   const T = translations[lang];
   const isRtl = lang === "ar";
@@ -216,6 +241,19 @@ const DepositPage = () => {
       });
   }, []);
 
+  useEffect(() => {
+    const fileFields = ["fichierCIN", "fichierRNE", "fichierProcuration", "fichierDossierJuridique"] as const;
+    const urls: Record<string, string> = {};
+    fileFields.forEach((field) => {
+      const file = form[field];
+      if (file) urls[field] = URL.createObjectURL(file);
+    });
+    setPreviewUrls(urls);
+    return () => {
+      Object.values(urls).forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [form.fichierCIN, form.fichierRNE, form.fichierProcuration, form.fichierDossierJuridique]);
+
   const updateField = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
@@ -235,26 +273,36 @@ const DepositPage = () => {
 
   const addAuthor = () => {
     setForm((prev) => ({ ...prev, auteurs: [...prev.auteurs, ""] }));
+    setAuteursCIN((prev) => [...prev, ""]);
   };
 
   const removeAuthor = (index: number) => {
     if (form.auteurs.length <= 1) return;
     const updated = form.auteurs.filter((_, i) => i !== index);
     setForm((prev) => ({ ...prev, auteurs: updated }));
+    setAuteursCIN((prev) => prev.filter((_, i) => i !== index));
   };
 
   const showProcurationPhysique = isNon && isCoAuteur;
+  const isImageFile = (file: File) => /\.(jpe?g|png)$/i.test(file.name);
 
   const validateStep1 = (): boolean => {
     const errs: Record<string, string> = {};
     const digitRegex = /^\d{8}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+    const postalRegex = /^\d{4}$/;
+
     if (form.typeDeposant === "PHYSIQUE") {
       if (!form.nomComplet.trim()) errs.nomComplet = T.errRequired;
       if (!form.cin.trim()) errs.cin = T.errRequired;
       else if (!digitRegex.test(form.cin.trim())) errs.cin = T.errCin;
-      if (!form.adresse.trim()) errs.adresse = T.errRequired;
+      if (!form.rue.trim()) errs.rue = T.errRequired;
+      if (!form.cite.trim()) errs.cite = T.errRequired;
+      if (!form.gouvernorat) errs.gouvernorat = T.errRequired;
+      if (!form.delegation) errs.delegation = T.errRequired;
+      if (!form.codePostal.trim()) errs.codePostal = T.errRequired;
+      else if (!postalRegex.test(form.codePostal.trim())) errs.codePostal = T.errCodePostal;
       if (!form.telephone.trim()) errs.telephone = T.errRequired;
       else if (!digitRegex.test(form.telephone.trim())) errs.telephone = T.errTelephone;
       if (!form.fax.trim()) errs.fax = T.errRequired;
@@ -266,7 +314,12 @@ const DepositPage = () => {
     } else {
       if (!form.raisonSociale.trim()) errs.raisonSociale = T.errRequired;
       if (!form.registreCommerce.trim()) errs.registreCommerce = T.errRequired;
-      if (!form.adresse.trim()) errs.adresse = T.errRequired;
+      if (!form.rue.trim()) errs.rue = T.errRequired;
+      if (!form.cite.trim()) errs.cite = T.errRequired;
+      if (!form.gouvernorat) errs.gouvernorat = T.errRequired;
+      if (!form.delegation) errs.delegation = T.errRequired;
+      if (!form.codePostal.trim()) errs.codePostal = T.errRequired;
+      else if (!postalRegex.test(form.codePostal.trim())) errs.codePostal = T.errCodePostal;
       if (!form.telephone.trim()) errs.telephone = T.errRequired;
       else if (!digitRegex.test(form.telephone.trim())) errs.telephone = T.errTelephone;
       if (!form.fax.trim()) errs.fax = T.errRequired;
@@ -329,7 +382,11 @@ const DepositPage = () => {
     fd.append("cin", form.cin);
     fd.append("raisonSociale", form.raisonSociale);
     fd.append("registreCommerce", form.registreCommerce);
-    fd.append("adresse", form.adresse);
+    fd.append("rue", form.rue);
+    fd.append("cite", form.cite);
+    fd.append("gouvernorat", form.gouvernorat);
+    fd.append("ville", form.delegation);
+    fd.append("codePostal", form.codePostal);
     fd.append("telephone", form.telephone);
     fd.append("fax", form.fax);
     fd.append("email", form.email);
@@ -356,7 +413,7 @@ const DepositPage = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.message || "Erreur lors de la soumission");
-      navigate("/mes-depots");
+      navigate(`/facture/${data.id}`);
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
@@ -367,16 +424,16 @@ const DepositPage = () => {
   const selectedCategory = categories.find((c) => String(c.id) === form.categorieId);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Top bar */}
       <div
-        className="sticky top-0 z-10 border-b border-border/60"
+        className="flex-shrink-0 z-10 border-b border-border/60"
         style={{ background: "hsl(215 60% 22%)" }}
       >
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
+        <div className="max-w-[85%] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
           <button
             onClick={() => navigate("/dashboard")}
-            className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-lg text-white/70 font-semibold hover:text-white transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -386,15 +443,23 @@ const DepositPage = () => {
           <h1 className="text-base font-semibold text-white tracking-tight">
             {T.topBarTitle}
           </h1>
-          <div className="w-16" />
+          <button
+            onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("user"); navigate("/"); }}
+            className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3-3l3-3m0 0l-3-3m3 3H9" />
+            </svg>
+            Déconnexion
+          </button>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-5" dir={dir}>
+      <div className="flex-1 overflow-auto max-w-[85%] mx-auto w-full px-4 sm:px-6 lg:px-8 py-2 md:py-3" dir={dir}>
         {/* Form title header + language toggle */}
-        <div className="paper-form mb-4 overflow-hidden">
+        <div className="paper-form mb-2 overflow-hidden">
           <div
-            className="flex items-center justify-between gap-4 px-6 md:px-8 py-3"
+            className="flex items-center justify-between gap-4 px-6 md:px-8 py-2"
             dir="ltr"
             style={{ background: "hsl(215 45% 94%)" }}
           >
@@ -439,13 +504,13 @@ const DepositPage = () => {
         </div>
 
         {/* Step indicator */}
-        <div className="paper-form mb-4 px-4 md:px-8 py-3">
+        <div className="paper-form mb-2 px-4 md:px-6 py-2">
           <div className="flex items-center justify-between" dir="ltr">
             {T.steps.map((label, i) => (
               <div key={i} className="flex items-center flex-1">
                 <div className="flex flex-col items-center">
                   <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors ${
                       step > i + 1
                         ? "bg-green-500 text-white"
                         : step === i + 1
@@ -462,7 +527,7 @@ const DepositPage = () => {
                       i + 1
                     )}
                   </div>
-                  <span className="text-[11px] font-medium text-foreground mt-1 hidden sm:block">
+                  <span className="font-medium text-foreground mt-1 hidden sm:block" style={{ fontSize: '13px' }}>
                     {label}
                   </span>
                 </div>
@@ -481,12 +546,12 @@ const DepositPage = () => {
         {/* Step 1 — Deposant */}
         {step === 1 && (
           <div className="paper-form mb-4">
-            <SectionHeader letter="A" title={T.sectionA} isRtl={isRtl} />
-            <div className="px-5 md:px-8 py-3 space-y-3">
+            <SectionHeader  title={T.sectionA} isRtl={isRtl} />
+            <div className="px-6 md:px-8 py-3 space-y-2.5">
               {/* Type selector */}
               <div className="flex flex-col sm:flex-row gap-2">
                 <label
-                  className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-colors ${
+                  className={`flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg border-2 cursor-pointer transition-colors ${
                     form.typeDeposant === "PHYSIQUE"
                       ? "border-primary bg-primary/5"
                       : "border-border hover:border-primary/30"
@@ -499,11 +564,12 @@ const DepositPage = () => {
                     checked={form.typeDeposant === "PHYSIQUE"}
                     onChange={() => updateField("typeDeposant", "PHYSIQUE")}
                     className="accent-primary"
+                    style={{ width: '18px', height: '18px' }}
                   />
-                  <span className="text-sm font-medium text-foreground">{T.physique}</span>
+                  <span className="font-medium text-foreground" style={{ fontSize: '15px' }}>{T.physique}</span>
                 </label>
                 <label
-                  className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-colors ${
+                  className={`flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg border-2 cursor-pointer transition-colors ${
                     form.typeDeposant === "MORALE"
                       ? "border-primary bg-primary/5"
                       : "border-border hover:border-primary/30"
@@ -516,8 +582,9 @@ const DepositPage = () => {
                     checked={form.typeDeposant === "MORALE"}
                     onChange={() => updateField("typeDeposant", "MORALE")}
                     className="accent-primary"
+                    style={{ width: '18px', height: '18px' }}
                   />
-                  <span className="text-sm font-medium text-foreground">{T.morale}</span>
+                  <span className="font-medium text-foreground" style={{ fontSize: '15px' }}>{T.morale}</span>
                 </label>
               </div>
 
@@ -541,9 +608,93 @@ const DepositPage = () => {
                 </>
               )}
 
+              {/* Address fields */}
+              <Field label={T.rue} value={form.rue}
+                onChange={(v) => updateField("rue", v)} error={errors.rue} required isRtl={isRtl} />
+
+              {/* Cité & Code postal — side by side */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-start gap-2">
+                  <label className={`text-foreground font-medium whitespace-nowrap pt-2 w-[100px] flex-shrink-0 ${isRtl ? "text-right" : "text-left"}`} style={{ fontSize: '17px' }}>
+                    {T.cite} <span className="text-destructive">*</span>
+                  </label>
+                  <div className="flex-1 min-w-0">
+                    <input type="text" value={form.cite} onChange={(e) => updateField("cite", e.target.value)}
+                      dir={detectDir(form.cite)} className={`input-field w-full ${errors.cite ? "border-destructive" : ""}`} style={{ fontSize: '14px' }} />
+                    {errors.cite && <p className="text-destructive mt-1" style={{ fontSize: '13px' }}>{errors.cite}</p>}
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <label className={`text-foreground font-medium whitespace-nowrap pt-2 w-[100px] flex-shrink-0 ${isRtl ? "text-right" : "text-left"}`} style={{ fontSize: '17px' }}>
+                    {T.codePostal} <span className="text-destructive">*</span>
+                  </label>
+                  <div className="flex-1 min-w-0">
+                    <input type="text" value={form.codePostal} onChange={(e) => updateField("codePostal", e.target.value)}
+                      dir={detectDir(form.codePostal)} className={`input-field w-full ${errors.codePostal ? "border-destructive" : ""}`} style={{ fontSize: '14px' }} />
+                    {errors.codePostal && <p className="text-destructive mt-1" style={{ fontSize: '13px' }}>{errors.codePostal}</p>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Gouvernorat & Délégation — side by side */}
+              <div className="flex justify-center gap-6">
+                <div className="flex items-start gap-2 w-[45%]">
+                  <label className={`text-foreground font-medium whitespace-nowrap pt-2 w-[100px] flex-shrink-0 ${isRtl ? "text-right" : "text-left"}`} style={{ fontSize: '17px' }}>
+                    {T.gouvernorat} <span className="text-destructive">*</span>
+                  </label>
+                  <div className="flex-1 min-w-0">
+                    <select
+                      value={form.gouvernorat}
+                      onChange={(e) => {
+                        updateField("gouvernorat", e.target.value);
+                        updateField("delegation", "");
+                      }}
+                      className={`input-field w-full ${errors.gouvernorat ? "border-destructive" : ""}`}
+                      dir="ltr"
+                      style={{ fontSize: '14px' }}
+                    >
+                      <option value="">{T.selectGouvernorat}</option>
+                      {GOUVERNORATS_DATA.map((g) => (
+                        <option key={g.fr} value={g.fr}>
+                          {lang === "ar" ? g.ar : g.fr}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.gouvernorat && <p className="text-destructive mt-1" style={{ fontSize: '13px' }}>{errors.gouvernorat}</p>}
+                  </div>
+                </div>
+                <div className="flex items-start gap-2 w-[45%]">
+                  <label className={`text-foreground font-medium whitespace-nowrap pt-2 w-[100px] flex-shrink-0 ${isRtl ? "text-right" : "text-left"}`} style={{ fontSize: '17px' }}>
+                    {T.delegation} <span className="text-destructive">*</span>
+                  </label>
+                  <div className="flex-1 min-w-0">
+                    <select
+                      value={form.delegation}
+                      onChange={(e) => updateField("delegation", e.target.value)}
+                      className={`input-field w-full ${errors.delegation ? "border-destructive" : ""}`}
+                      dir="ltr"
+                      disabled={!form.gouvernorat}
+                      style={{ fontSize: '14px' }}
+                    >
+                      <option value="">{T.selectDelegation}</option>
+                      {GOUVERNORATS_DATA
+                        .find((g) => g.fr === form.gouvernorat)
+                        ?.delegations.map((d) => {
+                          const frVal = typeof d.fr === 'string' ? d.fr : d.fr.nom;
+                          const arVal = typeof d.ar === 'string' ? d.ar : d.ar.nom;
+                          return (
+                            <option key={frVal} value={frVal}>
+                              {lang === "ar" ? arVal : frVal}
+                            </option>
+                          );
+                        })}
+                    </select>
+                    {errors.delegation && <p className="text-destructive mt-1" style={{ fontSize: '13px' }}>{errors.delegation}</p>}
+                  </div>
+                </div>
+              </div>
+
               {/* Common fields */}
-              <Field label={T.adresse} value={form.adresse}
-                onChange={(v) => updateField("adresse", v)} error={errors.adresse} required textarea isRtl={isRtl} />
               <Field label={T.telephone} value={form.telephone}
                 onChange={(v) => updateField("telephone", v)} error={errors.telephone} required isRtl={isRtl} />
               <Field label={T.fax} value={form.fax}
@@ -553,46 +704,49 @@ const DepositPage = () => {
 
               {/* Author status checkboxes — Physique only */}
               {form.typeDeposant === "PHYSIQUE" && (
-                <div className="border-t border-border pt-3 mt-3">
-                  <h3 className="text-sm font-semibold text-foreground mb-2">{T.authorStatusTitle}</h3>
+                <div className="border-t border-border pt-2 mt-2">
+                  <h3 className="font-medium text-foreground mb-1.5" style={{ fontSize: '17px' }}>{T.authorStatusTitle}</h3>
                   <div className="flex flex-wrap items-center gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={isOui}
                         onChange={() => { setIsOui(true); setIsNon(false); }}
-                        className="accent-primary w-4 h-4"
+                        className="accent-primary"
+                        style={{ width: '18px', height: '18px' }}
                       />
-                      <span className="text-sm text-foreground">{T.oui}</span>
+                      <span className="text-foreground" style={{ fontSize: '15px' }}>{T.oui}</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={isNon}
                         onChange={() => { setIsNon(true); setIsOui(false); }}
-                        className="accent-primary w-4 h-4"
+                        className="accent-primary"
+                        style={{ width: '18px', height: '18px' }}
                       />
-                      <span className="text-sm text-foreground">{T.non}</span>
+                      <span className="text-foreground" style={{ fontSize: '15px' }}>{T.non}</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={isCoAuteur}
                         onChange={() => setIsCoAuteur(!isCoAuteur)}
-                        className="accent-primary w-4 h-4"
+                        className="accent-primary"
+                        style={{ width: '18px', height: '18px' }}
                       />
-                      <span className="text-sm text-foreground">{T.coAuteur}</span>
+                      <span className="text-foreground" style={{ fontSize: '15px' }}>{T.coAuteur}</span>
                     </label>
                   </div>
                   {errors.authorStatus && (
-                    <p className="text-xs text-destructive mt-1.5">{errors.authorStatus}</p>
+                    <p className="text-destructive mt-1.5" style={{ fontSize: '13px' }}>{errors.authorStatus}</p>
                   )}
                 </div>
               )}
 
               {/* File uploads */}
-              <div className="border-t border-border pt-3 mt-3">
-                <h3 className="text-sm font-semibold text-foreground mb-3">{T.documents}</h3>
+              <div className="border-t border-border pt-2 mt-2">
+                <h3 className="font-medium text-foreground mb-2" style={{ fontSize: '17px' }}>{T.documents}</h3>
 
                 {form.typeDeposant === "PHYSIQUE" && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
@@ -635,30 +789,31 @@ const DepositPage = () => {
         {/* Step 2 — Oeuvre */}
         {step === 2 && (
           <div className="paper-form mb-4">
-            <SectionHeader letter="B" title={T.sectionB} isRtl={isRtl} />
+            <SectionHeader  title={T.sectionB} isRtl={isRtl} />
             <div className="px-5 md:px-8 py-3 space-y-3">
               <Field label={T.titre} value={form.titre}
                 onChange={(v) => updateField("titre", v)} error={errors.titre} required isRtl={isRtl} />
               <Field label={T.description} value={form.description}
-                onChange={(v) => updateField("description", v)} textarea isRtl={isRtl} />
+                onChange={(v) => updateField("description", v)} textarea required isRtl={isRtl} />
               <Field label={T.typeSupport} value={form.typeSupport}
-                onChange={(v) => updateField("typeSupport", v)} isRtl={isRtl} />
+                onChange={(v) => updateField("typeSupport", v)} required isRtl={isRtl} />
 
               {/* Category dropdown */}
-              <div className={`grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,2.5fr)] items-start gap-2 md:gap-4`}>
-                <label className={`text-sm text-foreground font-medium md:pt-2.5 ${isRtl ? "md:text-right" : "md:text-right"}`}>
+              <div className={`grid grid-cols-1 md:grid-cols-[auto_1fr] items-start gap-2 md:gap-4`}>
+                <label className={`text-foreground font-medium md:pt-2.5 ${isRtl ? "md:text-right" : "md:text-left"}`} style={{ fontSize: '17px' }}>
                   {T.categorie} <span className="text-destructive">*</span>
                 </label>
                 {categoriesError ? (
-                  <p className="text-sm text-destructive pt-2.5">{categoriesError}</p>
+                  <p className="text-destructive pt-2.5" style={{ fontSize: '13px' }}>{categoriesError}</p>
                 ) : (
                   <div>
                     <select
                       value={form.categorieId}
                       onChange={(e) => updateField("categorieId", e.target.value)}
                       disabled={categoriesLoading}
-                      className={`input-field w-full ${errors.categorieId ? "border-destructive" : ""}`}
+                      className={`input-field w-full max-w-sm ${errors.categorieId ? "border-destructive" : ""}`}
                       dir="ltr"
+                      style={{ fontSize: '14px' }}
                     >
                       <option value="">
                         {categoriesLoading ? T.loading : T.selectCategory}
@@ -670,7 +825,7 @@ const DepositPage = () => {
                       ))}
                     </select>
                     {errors.categorieId && (
-                      <p className="text-xs text-destructive mt-1">{errors.categorieId}</p>
+                      <p className="text-destructive mt-1" style={{ fontSize: '13px' }}>{errors.categorieId}</p>
                     )}
                   </div>
                 )}
@@ -682,21 +837,49 @@ const DepositPage = () => {
         {/* Step 3 — Auteur(s) */}
         {step === 3 && (
           <div className="paper-form mb-4">
-            <SectionHeader letter="C" title={T.sectionC} isRtl={isRtl} />
+            <SectionHeader title={T.sectionC} isRtl={isRtl} />
             <div className="px-5 md:px-8 py-3 space-y-2">
               {form.auteurs.map((author, index) => (
                 <div key={index} className="flex items-center gap-3">
-                  <span className="text-xs font-medium text-muted-foreground w-6 text-center flex-shrink-0">
+                  <span className="font-medium text-muted-foreground w-6 text-center flex-shrink-0" style={{ fontSize: '13px' }}>
                     {index + 1}.
                   </span>
-                  <input
-                    type="text"
-                    value={author}
-                    onChange={(e) => updateAuthor(index, e.target.value)}
-                    dir={detectDir(author)}
-                    placeholder={`${T.authorPlaceholder} ${index + 1}`}
-                    className="input-field flex-1"
-                  />
+                  {isNon && isCoAuteur ? (
+                    <div className="flex gap-2 flex-1">
+                      <input
+                        type="text"
+                        value={author}
+                        onChange={(e) => updateAuthor(index, e.target.value)}
+                        dir={detectDir(author)}
+                        placeholder={`${T.authorPlaceholder} ${index + 1}`}
+                        className="input-field"
+                        style={{ width: "60%", fontSize: '14px' }}
+                      />
+                      <input
+                        type="text"
+                        value={auteursCIN[index] || ""}
+                        onChange={(e) => {
+                          const updated = [...auteursCIN];
+                          updated[index] = e.target.value;
+                          setAuteursCIN(updated);
+                        }}
+                        dir="ltr"
+                        placeholder="CIN"
+                        className="input-field"
+                        style={{ width: "40%", fontSize: '14px' }}
+                      />
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      value={author}
+                      onChange={(e) => updateAuthor(index, e.target.value)}
+                      dir={detectDir(author)}
+                      placeholder={`${T.authorPlaceholder} ${index + 1}`}
+                      className="input-field flex-1"
+                      style={{ fontSize: '14px' }}
+                    />
+                  )}
                   {form.auteurs.length > 1 && (
                     <button
                       type="button"
@@ -712,13 +895,13 @@ const DepositPage = () => {
                 </div>
               ))}
               {errors.auteurs && (
-                <p className="text-xs text-destructive" style={{ marginInlineStart: "2.25rem" }}>{errors.auteurs}</p>
+                <p className="text-destructive" style={{ fontSize: '13px', marginInlineStart: "2.25rem" }}>{errors.auteurs}</p>
               )}
               <button
                 type="button"
                 onClick={addAuthor}
-                className="flex items-center gap-1.5 text-sm text-primary font-medium hover:text-primary/80 transition-colors mt-1"
-                style={{ marginInlineStart: "2.25rem" }}
+                className="flex items-center gap-1.5 text-primary font-medium hover:text-primary/80 transition-colors mt-1"
+                style={{ fontSize: '15px', marginInlineStart: "2.25rem" }}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -734,7 +917,7 @@ const DepositPage = () => {
           <div className="space-y-3">
             {/* Deposant summary */}
             <div className="paper-form">
-              <SectionHeader letter="A" title={T.sectionA} isRtl={isRtl} />
+              <SectionHeader title={T.sectionA} isRtl={isRtl} />
               <div className="px-5 md:px-8 py-3 space-y-1">
                 <SummaryRow label={T.type} value={form.typeDeposant === "PHYSIQUE" ? T.personnePhysique : T.personneMorale} isRtl={isRtl} />
                 {form.typeDeposant === "PHYSIQUE" ? (
@@ -748,23 +931,60 @@ const DepositPage = () => {
                     <SummaryRow label={T.registreCommerce} value={form.registreCommerce} isRtl={isRtl} />
                   </>
                 )}
-                <SummaryRow label={T.adresse} value={form.adresse} isRtl={isRtl} />
+                <SummaryRow label={T.rue} value={form.rue} isRtl={isRtl} />
+                <SummaryRow label={T.cite} value={form.cite} isRtl={isRtl} />
+                <SummaryRow label={T.gouvernorat} value={form.gouvernorat} isRtl={isRtl} />
+                <SummaryRow label={T.delegation} value={form.delegation} isRtl={isRtl} />
+                <SummaryRow label={T.codePostal} value={form.codePostal} isRtl={isRtl} />
                 <SummaryRow label={T.telephone} value={form.telephone} isRtl={isRtl} />
                 {form.fax && <SummaryRow label={T.fax} value={form.fax} isRtl={isRtl} />}
                 {form.email && <SummaryRow label={T.email} value={form.email} isRtl={isRtl} />}
                 <div className="border-t border-border pt-3 mt-3">
-                  <p className="text-xs font-semibold text-muted-foreground mb-1">{T.docsJoints}</p>
-                  {form.fichierCIN && <SummaryRow label="CIN" value={form.fichierCIN.name} isRtl={isRtl} />}
-                  {form.fichierRNE && <SummaryRow label="RNE" value={form.fichierRNE.name} isRtl={isRtl} />}
-                  {form.fichierProcuration && <SummaryRow label={T.fichierProcuration} value={form.fichierProcuration.name} isRtl={isRtl} />}
-                  {form.fichierDossierJuridique && <SummaryRow label={T.fichierDossierJuridique} value={form.fichierDossierJuridique.name} isRtl={isRtl} />}
+                  <p className="font-medium text-muted-foreground mb-1" style={{ fontSize: '17px' }}>{T.docsJoints}</p>
+                  {([
+                    ["fichierCIN", "CIN"],
+                    ["fichierRNE", "RNE"],
+                    ["fichierProcuration", T.fichierProcuration],
+                    ["fichierDossierJuridique", T.fichierDossierJuridique],
+                  ] as const).map(([field, label]) => {
+                    const file = form[field];
+                    const url = previewUrls[field];
+                    if (!file || !url) return null;
+                    return (
+                      <div key={field} className={`flex flex-col sm:flex-row sm:gap-4 py-1.5 ${isRtl ? "sm:flex-row-reverse" : ""}`}>
+                        <span className={`font-medium text-muted-foreground sm:w-40 flex-shrink-0 ${isRtl ? "sm:text-left" : "sm:text-right"}`} style={{ fontSize: '17px' }}>
+                          {label}
+                        </span>
+                        {isImageFile(file) ? (
+                          <img
+                            src={url}
+                            alt={file.name}
+                            style={{ width: "120px", height: "80px", objectFit: "cover", borderRadius: "4px", cursor: "pointer" }}
+                            onClick={() => window.open(url)}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => window.open(url)}
+                            className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors"
+                            style={{ fontSize: '14px' }}
+                          >
+                            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z" />
+                            </svg>
+                            {file.name}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
             {/* Oeuvre summary */}
             <div className="paper-form">
-              <SectionHeader letter="B" title={T.sectionB} isRtl={isRtl} />
+              <SectionHeader title={T.sectionB} isRtl={isRtl} />
               <div className="px-5 md:px-8 py-3 space-y-1">
                 <SummaryRow label={T.titre} value={form.titre} isRtl={isRtl} />
                 {form.description && <SummaryRow label={T.description} value={form.description} isRtl={isRtl} />}
@@ -779,11 +999,19 @@ const DepositPage = () => {
 
             {/* Auteurs summary */}
             <div className="paper-form">
-              <SectionHeader letter="C" title={T.sectionC} isRtl={isRtl} />
+              <SectionHeader title={T.sectionC} isRtl={isRtl} />
               <div className="px-5 md:px-8 py-3 space-y-1">
-                {form.auteurs.filter((a) => a.trim()).map((a, i) => (
-                  <SummaryRow key={i} label={`${T.auteur} ${i + 1}`} value={a} isRtl={isRtl} />
-                ))}
+                {form.auteurs
+                  .map((a, i) => [a, i] as const)
+                  .filter(([a]) => a.trim())
+                  .map(([a, origIdx], i) => (
+                    <div key={origIdx}>
+                      <SummaryRow label={`${T.auteur} ${i + 1}`} value={a} isRtl={isRtl} />
+                      {isNon && isCoAuteur && auteursCIN[origIdx]?.trim() && (
+                        <SummaryRow label="CIN" value={auteursCIN[origIdx]} isRtl={isRtl} />
+                      )}
+                    </div>
+                  ))}
               </div>
             </div>
           </div>
@@ -791,19 +1019,20 @@ const DepositPage = () => {
 
         {/* Error */}
         {submitError && (
-          <div className="mt-4 px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
+          <div className="mt-4 px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive" style={{ fontSize: '13px' }}>
             {submitError}
           </div>
         )}
 
         {/* Navigation buttons */}
-        <div className="flex items-center justify-between mt-4 mb-4" dir="ltr">
+        <div className="flex items-center justify-between mt-2 mb-2" dir="ltr">
           <div>
             {step > 1 && (
               <button
                 type="button"
                 onClick={handleBack}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-foreground bg-white border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 font-medium text-foreground bg-white border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                style={{ fontSize: '15px' }}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -818,6 +1047,7 @@ const DepositPage = () => {
                 type="button"
                 onClick={handleNext}
                 className="btn-primary flex items-center gap-2 px-6 py-2.5"
+                style={{ fontSize: '15px' }}
               >
                 {T.next}
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -830,7 +1060,8 @@ const DepositPage = () => {
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="btn-primary px-10 py-2.5 text-base disabled:opacity-60 disabled:cursor-not-allowed"
+                className="btn-primary px-10 py-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ fontSize: '15px' }}
               >
                 {submitting ? T.submitting : T.submit}
               </button>
@@ -844,22 +1075,15 @@ const DepositPage = () => {
 
 
 interface SectionHeaderProps {
-  letter: string;
   title: string;
   isRtl: boolean;
 }
-const SectionHeader = ({ letter, title, isRtl }: SectionHeaderProps) => (
+const SectionHeader = ({  title, isRtl }: SectionHeaderProps) => (
   <div
-    className={`flex items-center gap-2 px-5 md:px-8 py-2.5 border-b border-border ${isRtl ? "flex-row-reverse" : ""}`}
+    className={`flex items-center gap-2 px-6 md:px-8 py-4 border-b border-border underline${isRtl ? "flex-row-reverse" : ""}`}
     style={{ background: "hsl(215 45% 94%)" }}
   >
-    <span
-      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-      style={{ background: "hsl(215 60% 22%)" }}
-    >
-      {letter}
-    </span>
-    <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+    <h2 className="font-bold text-foreground" style={{ fontSize: '20px' }}>{title}</h2>
   </div>
 );
 
@@ -873,11 +1097,11 @@ interface FieldProps {
   isRtl: boolean;
 }
 const Field = ({ label, value, onChange, error, required, textarea, isRtl }: FieldProps) => (
-  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,2.5fr)] items-start gap-2 md:gap-4">
-    <label className={`text-sm text-foreground font-medium md:pt-2.5 ${isRtl ? "md:text-right" : "md:text-right"}`}>
+  <div className="flex items-start gap-3">
+    <label className={`text-foreground font-medium whitespace-nowrap pt-2 w-[160px] flex-shrink-0 ${isRtl ? "text-right" : "text-left"}`} style={{ fontSize: '17px' }}>
       {label} {required && <span className="text-destructive">*</span>}
     </label>
-    <div>
+    <div className="flex-1 min-w-0">
       {textarea ? (
         <textarea
           value={value}
@@ -885,6 +1109,7 @@ const Field = ({ label, value, onChange, error, required, textarea, isRtl }: Fie
           dir={detectDir(value)}
           rows={3}
           className={`input-field resize-none w-full ${error ? "border-destructive" : ""}`}
+          style={{ fontSize: '14px' }}
         />
       ) : (
         <input
@@ -893,9 +1118,10 @@ const Field = ({ label, value, onChange, error, required, textarea, isRtl }: Fie
           onChange={(e) => onChange(e.target.value)}
           dir={detectDir(value)}
           className={`input-field w-full ${error ? "border-destructive" : ""}`}
+          style={{ fontSize: '14px' }}
         />
       )}
-      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+      {error && <p className="text-destructive mt-1" style={{ fontSize: '13px' }}>{error}</p>}
     </div>
   </div>
 );
@@ -909,7 +1135,7 @@ interface FileFieldProps {
 }
 const FileField = ({ label, file, onChange, error, required }: FileFieldProps) => (
   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mb-1">
-    <label className="text-xs text-foreground font-medium flex-shrink-0">
+    <label className="text-foreground font-medium flex-shrink-0" style={{ fontSize: '17px' }}>
       {label} {required && <span className="text-destructive">*</span>}
     </label>
     <div className="flex-1">
@@ -917,15 +1143,16 @@ const FileField = ({ label, file, onChange, error, required }: FileFieldProps) =
         type="file"
         accept=".pdf,.jpg,.jpeg,.png"
         onChange={(e) => onChange(e.target.files?.[0] || null)}
-        className="text-sm text-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-border
-          file:text-sm file:font-medium file:bg-muted/50 file:text-foreground file:cursor-pointer
+        className="text-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-border
+          file:font-medium file:bg-muted/50 file:text-foreground file:cursor-pointer
           hover:file:bg-muted transition-colors"
+        style={{ fontSize: '14px' }}
         dir="ltr"
       />
       {file && (
-        <p className="text-xs text-muted-foreground mt-1">{file.name} ({(file.size / 1024).toFixed(0)} Ko)</p>
+        <p className="text-muted-foreground mt-1" style={{ fontSize: '13px' }}>{file.name} ({(file.size / 1024).toFixed(0)} Ko)</p>
       )}
-      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+      {error && <p className="text-destructive mt-1" style={{ fontSize: '13px' }}>{error}</p>}
     </div>
   </div>
 );
@@ -937,10 +1164,10 @@ interface SummaryRowProps {
 }
 const SummaryRow = ({ label, value, isRtl }: SummaryRowProps) => (
   <div className={`flex flex-col sm:flex-row sm:gap-4 py-1.5 ${isRtl ? "sm:flex-row-reverse" : ""}`}>
-    <span className={`text-xs font-medium text-muted-foreground sm:w-40 flex-shrink-0 ${isRtl ? "sm:text-left" : "sm:text-right"}`}>
+    <span className={`font-medium text-muted-foreground sm:w-40 flex-shrink-0 ${isRtl ? "sm:text-left" : "sm:text-right"}`} style={{ fontSize: '17px' }}>
       {label}
     </span>
-    <span className="text-sm text-foreground" dir={detectDir(value)}>
+    <span className="text-foreground" dir={detectDir(value)} style={{ fontSize: '14px' }}>
       {value || "\u2014"}
     </span>
   </div>

@@ -27,4 +27,19 @@ app.use("/oeuvres", oeuvreRoutes);
 app.use("/auth", authRoutes);
 app.use("/depots", depotRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
+app.get('/test-email', async (req, res) => {
+  const transporter = require('./config/mailer')
+  try {
+    await transporter.sendMail({
+      from: `"OTDAV" <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_USER, // sends to yourself
+      subject: 'Test OTDAV Email',
+      html: '<h1>Email works! ✅</h1><p>OTDAV renewal system is configured correctly.</p>'
+    })
+    res.json({ message: 'Email sent successfully ✅' })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
 module.exports = app;

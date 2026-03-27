@@ -7,7 +7,7 @@ interface Depot {
   id: number;
   dateDepot: string;
   dateCreation: string;
-  statut: "EN_ATTENTE" | "ACCEPTE" | "REJETE" | "PAYE" | "CERTIFIE";
+  statut: string;
   montant: number | null;
   motifRejet: string | null;
   typeDeposant: "PHYSIQUE" | "MORALE";
@@ -36,14 +36,10 @@ interface Depot {
   auteurs: { auteur: { nomComplet_fr: string | null; nomComplet_ar: string | null } }[];
 }
 
-type StatutKey = Depot["statut"];
-
-const statutBadge: Record<StatutKey, { label: string; bg: string; text: string }> = {
-  EN_ATTENTE: { label: "En attente", bg: "bg-yellow-50 border-yellow-300", text: "text-yellow-700" },
-  ACCEPTE:    { label: "Accepte",    bg: "bg-green-50 border-green-300",   text: "text-green-700" },
-  REJETE:     { label: "Rejete",     bg: "bg-red-50 border-red-300",       text: "text-red-700" },
-  PAYE:       { label: "Paye",       bg: "bg-blue-50 border-blue-300",     text: "text-blue-700" },
-  CERTIFIE:   { label: "Certifie",   bg: "bg-purple-50 border-purple-300", text: "text-purple-700" },
+const statutBadge: Record<string, { label: string; bg: string; text: string }> = {
+  CERTIFIE:   { label: "Certifié",              bg: "bg-green-50 border-green-300",  text: "text-green-700" },
+  EN_ATTENTE_RENOUVELLEMENT: { label: "Renouvellement requis", bg: "bg-orange-50 border-orange-300", text: "text-orange-700" },
+  EN_ATTENTE: { label: "En cours",              bg: "bg-gray-50 border-gray-300",    text: "text-gray-700" },
 };
 
 //helpers
@@ -232,7 +228,7 @@ const DepotsPage = () => {
                   </tr>
                 )}
                 {depots.map((depot) => {
-                  const badge = statutBadge[depot.statut];
+                  const badge = statutBadge[depot.statut] || { label: "En cours", bg: "bg-gray-50 border-gray-300", text: "text-gray-700" };
                   return (
                     <tr
                       key={depot.id}
@@ -333,7 +329,7 @@ const DepotsPage = () => {
                 <DetailRow label="ID" value={String(viewDepot.id)} />
                 <DetailRow label="Date de depot" value={formatDate(viewDepot.dateDepot)} />
                 <DetailRow label="Date de creation" value={formatDate(viewDepot.dateCreation)} />
-                <DetailRow label="Statut" value={statutBadge[viewDepot.statut].label} />
+                <DetailRow label="Statut" value={(statutBadge[viewDepot.statut] || { label: "En cours" }).label} />
                 <DetailRow label="Montant" value={viewDepot.montant ? `${viewDepot.montant} DT` : "—"} />
                 {viewDepot.statut === "REJETE" && viewDepot.motifRejet && (
                   <DetailRow label="Motif de rejet" value={viewDepot.motifRejet} />

@@ -16,4 +16,7 @@ router.get("/deposants",       adminMiddleware, controller.getAllDeposants);
 router.delete("/deposants/:id", adminMiddleware, controller.deleteDeposant);
 router.get("/rapports/yearly", adminMiddleware, controller.getYearlyReport);
 router.put("/parametres/password", adminMiddleware, controller.changePassword);
+router.get("/users",                    adminMiddleware, controller.getAllUsers);
+router.put("/users/:id/permissions",    adminMiddleware, controller.updateUserPermissions);
+router.get("/rapports/yearly-renouv", adminMiddleware, controller.getYearlyRenouvellementsReport);
 module.exports = router;

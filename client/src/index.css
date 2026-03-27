@@ -77,9 +77,10 @@
 
 @layer components {
   .input-field {
-    @apply w-full border border-input rounded-lg px-3.5 py-2.5 text-sm bg-white text-foreground
+    @apply w-full border border-input rounded-lg px-3 py-2 bg-white text-foreground
       focus:outline-none focus:ring-2 focus:ring-ring/25 focus:border-primary
       placeholder:text-muted-foreground/60 transition-all duration-150;
+    font-size: 14px;
   }
 
   .input-field:hover:not(:focus) {
@@ -87,8 +88,9 @@
   }
 
   .btn-primary {
-    @apply bg-primary text-primary-foreground rounded-lg px-6 py-2.5 text-sm font-semibold
+    @apply bg-primary text-primary-foreground rounded-lg px-6 py-2.5 font-semibold
       shadow-sm hover:shadow-md transition-all duration-200 active:scale-[0.98];
+    font-size: 15px;
   }
 
   .btn-primary:hover {

@@ -61,8 +61,7 @@ const AdminLayout = () => {
         <div className="px-5 py-5 flex items-center gap-3" style={{ borderBottom: "1px solid hsl(215 60% 28%)" }}>
           <img src={otdavLogo} alt="OTDAV" className="w-9 h-auto" />
           <div>
-            <h1 className="text-sm font-bold text-white tracking-tight leading-tight">OTDAV</h1>
-            <p className="text-[10px] text-white/40">Administration</p>
+            <h1 className="text-sm font-bold text-white tracking-tight leading-tight">Administration</h1>
           </div>
         </div>
 

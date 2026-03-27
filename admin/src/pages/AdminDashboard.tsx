@@ -8,7 +8,7 @@ interface Depot {
   id: number;
   dateDepot: string;
   dateCreation: string;
-  statut: "EN_ATTENTE" | "ACCEPTE" | "REJETE" | "PAYE" | "CERTIFIE";
+  statut: string;
   montant: number | null;
   motifRejet: string | null;
   typeDeposant: "PHYSIQUE" | "MORALE";
@@ -37,23 +37,17 @@ interface Depot {
   auteurs: { auteur: { nomComplet_fr: string | null; nomComplet_ar: string | null } }[];
 }
 
-type StatutKey = Depot["statut"];
-
-const statutBadge: Record<StatutKey, { label: string; bg: string; text: string }> = {
-  EN_ATTENTE: { label: "En attente", bg: "bg-yellow-50 border-yellow-300", text: "text-yellow-700" },
-  ACCEPTE:    { label: "Accepté",    bg: "bg-green-50 border-green-300",   text: "text-green-700" },
-  REJETE:     { label: "Rejeté",     bg: "bg-red-50 border-red-300",       text: "text-red-700" },
-  PAYE:       { label: "Payé",       bg: "bg-blue-50 border-blue-300",     text: "text-blue-700" },
-  CERTIFIE:   { label: "Certifié",   bg: "bg-purple-50 border-purple-300", text: "text-purple-700" },
+const statutBadge: Record<string, { label: string; bg: string; text: string }> = {
+  CERTIFIE:   { label: "Certifié",              bg: "bg-green-50 border-green-300",  text: "text-green-700" },
+  EN_ATTENTE_RENOUVELLEMENT: { label: "Renouvellement requis", bg: "bg-orange-50 border-orange-300", text: "text-orange-700" },
+  EN_ATTENTE: { label: "En cours",              bg: "bg-gray-50 border-gray-300",    text: "text-gray-700" },
 };
 
-const statCards: { key: StatutKey | "ALL"; label: string; color: string; icon: string }[] = [
-  { key: "ALL",        label: "Total",      color: "hsl(215 60% 22%)", icon: "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" },
-  { key: "EN_ATTENTE", label: "En attente", color: "hsl(45 93% 47%)",  icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
-  { key: "ACCEPTE",    label: "Acceptés",   color: "hsl(142 71% 45%)", icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
-  { key: "REJETE",     label: "Rejetés",    color: "hsl(0 65% 50%)",   icon: "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" },
-  { key: "PAYE",       label: "Payés",      color: "hsl(217 91% 60%)", icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" },
-  { key: "CERTIFIE",   label: "Certifiés",  color: "hsl(271 76% 53%)", icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+const statCards: { key: string; label: string; color: string; icon: string }[] = [
+  { key: "ALL",        label: "Total dépôts",         color: "hsl(215 60% 22%)", icon: "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" },
+  { key: "CERTIFIE",   label: "Certifiés",            color: "hsl(142 71% 45%)", icon: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+  { key: "EN_ATTENTE_RENOUVELLEMENT", label: "Renouvellement requis", color: "hsl(25 95% 53%)", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
+  { key: "EN_ATTENTE", label: "En cours",             color: "hsl(107 0% 42%)",  icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
 ];
 
 //helpers
@@ -298,7 +292,7 @@ const AdminDashboard = () => {
                     </tr>
                   )}
                   {depots.map((depot) => {
-                    const badge = statutBadge[depot.statut];
+                    const badge = statutBadge[depot.statut] || { label: "En cours", bg: "bg-gray-50 border-gray-300", text: "text-gray-700" };
                     return (
                       <tr
                         key={depot.id}
@@ -401,7 +395,7 @@ const AdminDashboard = () => {
                 <DetailRow label="ID" value={String(viewDepot.id)} />
                 <DetailRow label="Date de depot" value={formatDate(viewDepot.dateDepot)} />
                 <DetailRow label="Date de creation" value={formatDate(viewDepot.dateCreation)} />
-                <DetailRow label="Statut" value={statutBadge[viewDepot.statut].label} />
+                <DetailRow label="Statut" value={(statutBadge[viewDepot.statut] || { label: "En cours" }).label} />
                 <DetailRow label="Montant" value={viewDepot.montant ? `${viewDepot.montant} DT` : "—"} />
                 {viewDepot.statut === "REJETE" && viewDepot.motifRejet && (
                   <DetailRow label="Motif de rejet" value={viewDepot.motifRejet} />

@@ -28,7 +28,8 @@ exports.login = async (req, res) => {
       admin: { id: admin.id, email: admin.email }
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -46,7 +47,8 @@ exports.getAllDepots = async (req, res) => {
     });
     res.json(depots);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -69,7 +71,8 @@ exports.getDepotById = async (req, res) => {
     if (!depot) return res.status(404).json({ error: "Dépôt non trouvé" });
     res.json(depot);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -85,7 +88,8 @@ exports.accepterDepot = async (req, res) => {
     });
     res.json({ message: "Dépôt accepté avec succès", depot });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -109,7 +113,8 @@ exports.rejeterDepot = async (req, res) => {
     });
     res.json({ message: "Dépôt rejeté", depot });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -122,7 +127,8 @@ exports.deleteDepot = async (req, res) => {
     await prisma.depot.delete({ where: { id } });
     res.json({ message: "Dépôt supprimé avec succès" });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -140,7 +146,8 @@ exports.getAllDeposants = async (req, res) => {
     });
     res.json(deposants);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -161,7 +168,8 @@ exports.deleteDeposant = async (req, res) => {
     await prisma.deposant.delete({ where: { id } });
     res.json({ message: "Déposant supprimé avec succès" });
   } catch (error) {
-    res.status(500).json({ error: "Une erreur est survenue. Veuillez réessayer." });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -214,7 +222,8 @@ exports.getYearlyReport = async (req, res) => {
 
     res.json({ year, months, report })
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
   }
 };
 
@@ -241,6 +250,97 @@ exports.changePassword = async (req, res) => {
 
     res.json({ message: "Mot de passe modifié avec succès" })
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
+  }
+};
+// GET ALL USERS
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        createdAt: true,
+        canDepot: true,
+        canFCS: true,
+        _count: { select: { depots: true } }
+      }
+    })
+    res.json(users)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
+  }
+};
+
+// UPDATE USER PERMISSIONS
+exports.updateUserPermissions = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id)
+    if (isNaN(id)) return res.status(400).json({ error: "ID invalide" })
+
+    const { canDepot, canFCS } = req.body
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
+        canDepot: Boolean(canDepot),
+        canFCS: Boolean(canFCS)
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        canDepot: true,
+        canFCS: true
+      }
+    })
+
+    res.json({ message: "Permissions mises à jour", user })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
+  }
+};
+
+exports.getYearlyRenouvellementsReport = async (req, res) => {
+  try {
+    const year = parseInt(req.query.year) || new Date().getFullYear()
+
+    const depots = await prisma.depot.findMany({
+      where: {
+        dateRenouvellement: {
+          gte: new Date(`${year}-01-01`),
+          lte: new Date(`${year}-12-31`)
+        }
+      },
+      include: {
+        oeuvre: { include: { categorie: true } }
+      }
+    })
+
+    const months = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"]
+    const report = []
+
+    for (let code = 1; code <= 16; code++) {
+      const row = { code, categorie: `صنف ${code}` }
+      months.forEach((mois, index) => {
+        const count = depots.filter(d =>
+          d.oeuvre?.categorie?.code === code &&
+          new Date(d.dateRenouvellement).getMonth() === index
+        ).length
+        row[`count_${index}`] = count
+        row[`amount_${index}`] = count * 30
+      })
+      report.push(row)
+    }
+
+    res.json({ year, months, report })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
   }
 }

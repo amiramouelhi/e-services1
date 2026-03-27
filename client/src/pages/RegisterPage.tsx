@@ -1,8 +1,66 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import otdavLogo from "../assets/otdav-logo.png";
+import OtdavSidebar from "../components/OtdavSidebar";
+
+type Lang = "ar" | "fr";
+
+const T = {
+  ar: {
+    title: "إنشاء حساب جديد",
+    fullName: "الاسم الكامل",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    confirmPassword: "تأكيد كلمة المرور",
+    submit: "إنشاء حساب",
+    submitting: "...جارٍ الإنشاء",
+    loginLink: "لديك حساب بالفعل؟ ",
+    loginAction: "تسجيل الدخول",
+    fullNameRequired: "الاسم الكامل مطلوب",
+    passwordMismatch: "كلمتا المرور غير متطابقتين",
+    passwordWeak: "كلمة المرور لا تستوفي المتطلبات المطلوبة",
+    genericError: "فشل التسجيل",
+    unknownError: "خطأ غير معروف",
+    reqLength: "8 أحرف على الأقل",
+    reqUpper: "حرف كبير (A-Z)",
+    reqLower: "حرف صغير (a-z)",
+    reqDigit: "رقم (0-9)",
+    reqSpecial: "رمز خاص (!@#$...)",
+    placeholderName: "أدخل اسمك الكامل",
+    placeholderEmail: "أدخل بريدك الإلكتروني",
+    placeholderPassword: "أدخل كلمة المرور",
+    placeholderConfirm: "أعد إدخال كلمة المرور",
+  },
+  fr: {
+    title: "Créer un compte",
+    fullName: "Nom complet",
+    email: "Adresse e-mail",
+    password: "Mot de passe",
+    confirmPassword: "Confirmer le mot de passe",
+    submit: "S'inscrire",
+    submitting: "Inscription en cours...",
+    loginLink: "Déjà un compte ? ",
+    loginAction: "Se connecter",
+    fullNameRequired: "Le nom complet est obligatoire",
+    passwordMismatch: "Les mots de passe ne correspondent pas",
+    passwordWeak: "Le mot de passe ne répond pas aux exigences requises",
+    genericError: "Échec de l'inscription",
+    unknownError: "Erreur inconnue",
+    reqLength: "Au moins 8 caractères",
+    reqUpper: "Une lettre majuscule (A-Z)",
+    reqLower: "Une lettre minuscule (a-z)",
+    reqDigit: "Un chiffre (0-9)",
+    reqSpecial: "Un caractère spécial (!@#$...)",
+    placeholderName: "Saisir votre nom complet",
+    placeholderEmail: "Saisir votre adresse e-mail",
+    placeholderPassword: "Saisir votre mot de passe",
+    placeholderConfirm: "Confirmer votre mot de passe",
+  },
+};
 
 const RegisterPage = () => {
+  const [lang, setLang] = useState<Lang>("ar");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -10,12 +68,34 @@ const RegisterPage = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  const t = T[lang];
+  const isRtl = lang === "ar";
+
+  const pwChecks = [
+    { key: "length" as const, pass: password.length >= 8, label: t.reqLength },
+    { key: "upper" as const, pass: /[A-Z]/.test(password), label: t.reqUpper },
+    { key: "lower" as const, pass: /[a-z]/.test(password), label: t.reqLower },
+    { key: "digit" as const, pass: /\d/.test(password), label: t.reqDigit },
+    { key: "special" as const, pass: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password), label: t.reqSpecial },
+  ];
+  const allPwValid = pwChecks.every((c) => c.pass);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
+    if (!fullName.trim()) {
+      setError(t.fullNameRequired);
+      return;
+    }
+
+    if (!allPwValid) {
+      setError(t.passwordWeak);
+      return;
+    }
+
     if (password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas");
+      setError(t.passwordMismatch);
       return;
     }
 
@@ -25,15 +105,15 @@ const RegisterPage = () => {
       const res = await fetch("http://localhost:5000/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ fullName, email, password }),
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Échec de l'inscription");
+        throw new Error(data.error || t.genericError);
       }
       navigate("/", { state: { success: "Compte créé avec succès" } });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setError(err instanceof Error ? err.message : t.unknownError);
     } finally {
       setSubmitting(false);
     }
@@ -41,36 +121,40 @@ const RegisterPage = () => {
 
   return (
     <div className="flex min-h-screen">
-      {/* Left Side - Branding Panel */}
-      <div
-        className="hidden md:flex w-1/2 flex-col items-center justify-center relative overflow-hidden"
-        style={{ background: "hsl(215 60% 22%)" }}
-      >
-        {/* Decorative circles */}
-        <div
-          className="absolute -top-24 -left-24 w-96 h-96 rounded-full opacity-10"
-          style={{ background: "hsl(215 60% 60%)" }}
-        />
-        <div
-          className="absolute -bottom-32 -right-32 w-[500px] h-[500px] rounded-full opacity-[0.07]"
-          style={{ background: "hsl(215 60% 70%)" }}
-        />
-
-        <div className="relative z-10 text-center px-8">
-          <div className="mb-8 bg-white/10 backdrop-blur-sm rounded-2xl p-6 inline-block">
-            <img src={otdavLogo} alt="OTDAV Logo" className="w-28 h-auto mx-auto" />
-          </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">App-Depot</h1>
-          <div className="w-12 h-0.5 bg-white/30 mx-auto my-4" />
-          <p className="text-base text-white/70 max-w-xs mx-auto leading-relaxed">
-            Organisme Tunisien des Droits d'Auteur et des Droits Voisins
-          </p>
-        </div>
-      </div>
+      <OtdavSidebar />
 
       {/* Right Side - Register Form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center bg-background px-6">
-        <div className="w-full max-w-sm">
+      <div className="w-full md:w-1/2 flex items-center justify-center bg-background px-6 relative">
+        {/* Language toggle — fixed top right */}
+        <div
+          className="absolute top-4 right-4 z-10 flex items-center rounded-full p-0.5"
+          style={{ background: "hsl(215 25% 90%)" }}
+        >
+          <button
+            onClick={() => setLang("ar")}
+            className="relative px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-200"
+            style={
+              lang === "ar"
+                ? { background: "white", color: "hsl(215 60% 22%)", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }
+                : { background: "transparent", color: "hsl(215 15% 50%)" }
+            }
+          >
+            عربي
+          </button>
+          <button
+            onClick={() => setLang("fr")}
+            className="relative px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-200"
+            style={
+              lang === "fr"
+                ? { background: "white", color: "hsl(215 60% 22%)", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }
+                : { background: "transparent", color: "hsl(215 15% 50%)" }
+            }
+          >
+            Francais
+          </button>
+        </div>
+
+        <div className="w-full max-w-sm" dir={isRtl ? "rtl" : "ltr"}>
           {/* Mobile logo */}
           <div className="md:hidden text-center mb-10">
             <img src={otdavLogo} alt="OTDAV Logo" className="w-20 h-auto mx-auto mb-3" />
@@ -80,11 +164,8 @@ const RegisterPage = () => {
 
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-foreground tracking-tight">
-              Inscription
+              {t.title}
             </h2>
-            <p className="text-sm text-muted-foreground mt-2">
-              Créez votre compte OTDAV
-            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -95,40 +176,63 @@ const RegisterPage = () => {
             )}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
-                Adresse e-mail
+                {t.fullName}
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="input-field"
+                placeholder={t.placeholderName}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                {t.email}
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="input-field"
-                placeholder="Saisir votre adresse e-mail"
+                placeholder={t.placeholderEmail}
                 required
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
-                Mot de passe
+                {t.password}
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input-field"
-                placeholder="Saisir votre mot de passe"
+                placeholder={t.placeholderPassword}
                 required
               />
+              {password.length > 0 && (
+                <ul className="mt-2 space-y-0.5">
+                  {pwChecks.map((c) => (
+                    <li key={c.key} className="flex items-center gap-1.5 text-xs" style={{ color: c.pass ? "hsl(142 71% 45%)" : "hsl(var(--muted-foreground))" }}>
+                      <span>{c.pass ? "✅" : "❌"}</span>
+                      <span>{c.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
-                Confirmer le mot de passe
+                {t.confirmPassword}
               </label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="input-field"
-                placeholder="Confirmer votre mot de passe"
+                placeholder={t.placeholderConfirm}
                 required
               />
             </div>
@@ -137,14 +241,14 @@ const RegisterPage = () => {
               disabled={submitting}
               className="btn-primary w-full py-3 text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {submitting ? "Inscription en cours..." : "S'inscrire"}
+              {submitting ? t.submitting : t.submit}
             </button>
           </form>
 
           <p className="text-sm text-muted-foreground text-center mt-6">
-            Vous avez déjà un compte ?{" "}
+            {t.loginLink}
             <Link to="/" className="text-primary font-medium hover:underline">
-              Se connecter
+              {t.loginAction}
             </Link>
           </p>
 

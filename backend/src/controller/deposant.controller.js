@@ -53,7 +53,8 @@ exports.createDeposant = async (req, res) => {
 
     res.status(201).json(deposant);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -66,7 +67,8 @@ exports.getAllDeposants = async (req, res) => {
 
     res.json(deposants);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -89,7 +91,8 @@ exports.getDeposantById = async (req, res) => {
 
     res.json(deposant);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -113,7 +116,8 @@ exports.searchDeposant = async (req, res) => {
 
     res.json(deposants)
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
   }
 }
 
@@ -175,7 +179,8 @@ exports.updateDeposant = async (req, res) => {
 
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -193,6 +198,7 @@ exports.deleteDeposant = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };

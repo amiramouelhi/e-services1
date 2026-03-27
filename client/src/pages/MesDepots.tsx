@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 interface Depot {
   id: number;
   dateCreation: string;
-  statut: "EN_ATTENTE" | "ACCEPTE" | "REJETE" | "PAYE" | "CERTIFIE";
+  dateExpiration: string | null;
+  statut: string;
   motifRejet: string | null;
   oeuvre: {
     titre_fr: string | null;
@@ -19,38 +20,26 @@ interface Depot {
 }
 
 const statutConfig: Record<
-  Depot["statut"],
+  string,
   { label: string; bg: string; text: string; border: string }
 > = {
-  EN_ATTENTE: {
-    label: "En attente de vérification",
-    bg: "bg-yellow-50",
-    text: "text-yellow-700",
-    border: "border-yellow-300",
-  },
-  ACCEPTE: {
-    label: "Accepté — Veuillez payer 30 DT",
+  CERTIFIE: {
+    label: "Certifié — Vous pouvez imprimer votre certificat",
     bg: "bg-green-50",
     text: "text-green-700",
     border: "border-green-300",
   },
-  REJETE: {
-    label: "Rejeté",
-    bg: "bg-red-50",
-    text: "text-red-700",
-    border: "border-red-300",
+  EN_ATTENTE_RENOUVELLEMENT: {
+    label: "Renouvellement requis",
+    bg: "bg-orange-50",
+    text: "text-orange-700",
+    border: "border-orange-300",
   },
-  PAYE: {
-    label: "Paiement confirmé",
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    border: "border-blue-300",
-  },
-  CERTIFIE: {
-    label: "Certifié",
-    bg: "bg-purple-50",
-    text: "text-purple-700",
-    border: "border-purple-300",
+  EN_ATTENTE: {
+    label: "En cours de traitement",
+    bg: "bg-gray-50",
+    text: "text-gray-700",
+    border: "border-gray-300",
   },
 };
 
@@ -99,7 +88,7 @@ const MesDepotsPage = () => {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
           <button
             onClick={() => navigate("/dashboard")}
-            className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-lg text-white/70 font-semibold hover:text-white transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -109,7 +98,15 @@ const MesDepotsPage = () => {
           <h1 className="text-base font-semibold text-white tracking-tight">
             Mes Dépôts / إيداعاتي
           </h1>
-          <div className="w-16" />
+          <button
+            onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("user"); navigate("/"); }}
+            className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3-3l3-3m0 0l-3-3m3 3H9" />
+            </svg>
+            Déconnexion
+          </button>
         </div>
       </div>
 
@@ -183,7 +180,10 @@ const MesDepotsPage = () => {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {depots.map((depot) => {
-                    const cfg = statutConfig[depot.statut];
+                    const cfg = statutConfig[depot.statut] || { label: "En cours", bg: "bg-gray-50", text: "text-gray-700", border: "border-gray-300" };
+                    const label = depot.statut === "EN_ATTENTE_RENOUVELLEMENT" && depot.dateExpiration
+                      ? `Renouvellement requis avant le ${formatDate(depot.dateExpiration)}`
+                      : cfg.label;
                     return (
                       <tr key={depot.id} className="hover:bg-muted/30 transition-colors">
                         <td className="px-5 py-4 text-muted-foreground font-medium">
@@ -203,32 +203,8 @@ const MesDepotsPage = () => {
                             <span
                               className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}
                             >
-                              {cfg.label}
+                              {label}
                             </span>
-
-                            {depot.statut === "REJETE" && depot.motifRejet && (
-                              <p className="text-xs text-red-600 pl-1">
-                                Motif : {depot.motifRejet}
-                              </p>
-                            )}
-
-                            {depot.statut === "ACCEPTE" && (
-                              <button
-                                disabled
-                                className="self-start mt-1 px-3 py-1 rounded-md text-xs font-medium bg-green-100 text-green-700 border border-green-300 opacity-60 cursor-not-allowed"
-                              >
-                                Payer
-                              </button>
-                            )}
-
-                            {depot.statut === "CERTIFIE" && (
-                              <button
-                                disabled
-                                className="self-start mt-1 px-3 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-700 border border-purple-300 opacity-60 cursor-not-allowed"
-                              >
-                                Télécharger le certificat
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>

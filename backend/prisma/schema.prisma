@@ -7,20 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Statut {
-  EN_ATTENTE   
-  ACCEPTE      
-  REJETE      
-  PAYE         
+enum Statut { 
   CERTIFIE
+  EN_ATTENTE_RENOUVELLEMENT
 }
 
 model User {
   id        Int      @id @default(autoincrement())
+  fullName  String
   email     String   @unique
   password  String
   createdAt DateTime @default(now())
-
+  canDepot  Boolean  @default(false)
+  canFCS    Boolean  @default(false)
   depots    Depot[]
 }
 
@@ -100,7 +99,10 @@ model Depot {
   dateEmissionCertificat     DateTime?
   dateReceptionCertificat    DateTime?
   dateCreation               DateTime  @default(now())
-  statut                     Statut    @default(EN_ATTENTE)
+  dateExpiration            DateTime?
+  dateRenouvellement        DateTime?
+  fichierDemandeRenouvellement String?
+  statut                     Statut    @default(CERTIFIE)
   konnectPaymentRef          String?
   motifRejet      String?
 

@@ -22,6 +22,11 @@ const SHORT_MONTHS = [
   "Jul", "Aou", "Sep", "Oct", "Nov", "Dec",
 ];
 
+const ARABIC_MONTHS = [
+  "جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان",
+  "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+];
+
 const YEAR_OPTIONS = [2024, 2025, 2026, 2027];
 
 const getToken = () => localStorage.getItem("adminToken");
@@ -40,153 +45,292 @@ const tooltipStyle = {
   boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
 };
 
-const RapportsPage = () => {
-  const navigate = useNavigate();
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [data, setData] = useState<ReportData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+/* ─────────────────── helpers ─────────────────── */
 
-  const fetchReport = useCallback(async (y: number) => {
-    const token = getToken();
-    if (!token) { navigate("/"); return; }
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(`http://localhost:5000/admin/rapports/yearly?year=${y}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Erreur lors du chargement du rapport");
-      const json: ReportData = await res.json();
-      setData(json);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erreur inconnue");
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [navigate]);
-
-  useEffect(() => { fetchReport(year); }, [year, fetchReport]);
-
-  // Build 16 category rows
+const buildRows = (data: ReportData | null): ReportRow[] => {
   const rows: ReportRow[] = [];
   for (let i = 1; i <= 16; i++) {
     const found = data?.report.find((r) => r.code === i);
     rows.push(found || { code: i, categorie: `صنف ${i}` });
   }
+  return rows;
+};
 
-  // Totals per month
-  const totals = Array.from({ length: 12 }, (_, m) => ({
+const buildTotals = (rows: ReportRow[]) =>
+  Array.from({ length: 12 }, (_, m) => ({
     count: rows.reduce((s, r) => s + getCount(r, m), 0),
     amount: rows.reduce((s, r) => s + getAmount(r, m), 0),
   }));
 
-  // Grand totals
-  const grandTotalCount = totals.reduce((s, t) => s + t.count, 0);
-  const grandTotalAmount = grandTotalCount * 30;
-
-  // Chart 1 & 2 data — depots and amounts per month
-  const monthlyChartData = SHORT_MONTHS.map((name, i) => ({
+const buildMonthlyChart = (totals: { count: number; amount: number }[], amountPerUnit: number) =>
+  SHORT_MONTHS.map((name, i) => ({
     name,
     depots: totals[i].count,
-    montant: totals[i].count * 30,
+    montant: totals[i].count * amountPerUnit,
   }));
 
-  // Chart 3 data — depots per category (only those with > 0)
-  const categoryChartData = rows
+const buildCategoryChart = (rows: ReportRow[]) =>
+  rows
     .map((r) => {
       const total = Array.from({ length: 12 }, (_, m) => getCount(r, m)).reduce((a, b) => a + b, 0);
       return { name: r.categorie, depots: total };
     })
     .filter((c) => c.depots > 0);
 
-  // Excel export
-  const exportExcel = () => {
-    const wb = XLSX.utils.book_new();
-    const wsData: (string | number)[][] = [];
+/* ─────────────────── Excel helpers ─────────────────── */
 
-    const months = ["جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان", "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-
-    wsData.push(["إيداع سنة " + year, ...Array(24).fill("")]);
-    wsData.push(["الصنف", ...months.flatMap((m) => [m, ""])]);
-    wsData.push(["", ...months.flatMap(() => ["العدد", "المبلغ"])]);
-
-    rows.forEach((row) => {
-      wsData.push([
-        row.categorie,
-        ...Array.from({ length: 12 }, (_, i) => [getCount(row, i), getAmount(row, i)]).flat(),
-      ]);
-    });
-
+const buildSheetData = (rows: ReportRow[], totals: { count: number; amount: number }[], title: string) => {
+  const wsData: (string | number)[][] = [];
+  wsData.push([title, ...Array(24).fill("")]);
+  wsData.push(["الصنف", ...ARABIC_MONTHS.flatMap((m) => [m, ""])]);
+  wsData.push(["", ...ARABIC_MONTHS.flatMap(() => ["العدد", "المبلغ"])]);
+  rows.forEach((row) => {
     wsData.push([
-      "المجموع",
-      ...Array.from({ length: 12 }, (_, i) => [totals[i].count, totals[i].amount]).flat(),
+      row.categorie,
+      ...Array.from({ length: 12 }, (_, i) => [getCount(row, i), getAmount(row, i)]).flat(),
     ]);
+  });
+  wsData.push([
+    "المجموع",
+    ...Array.from({ length: 12 }, (_, i) => [totals[i].count, totals[i].amount]).flat(),
+  ]);
+  return wsData;
+};
 
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
+const styleSheet = (ws: XLSX.WorkSheet, totalRows: number) => {
+  const totalCols = 25;
+  ws["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 24 } },
+    ...ARABIC_MONTHS.map((_, i) => ({ s: { r: 1, c: 1 + i * 2 }, e: { r: 1, c: 2 + i * 2 } })),
+  ];
+  ws["!cols"] = [{ wch: 14 }, ...Array(24).fill({ wch: 10 })];
+  ws["!rows"] = [{ hpt: 30 }, { hpt: 25 }, { hpt: 20 }, ...Array(16).fill({ hpt: 18 }), { hpt: 35 }];
+  ws["!dir"] = "rtl";
 
-    ws["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 24 } },
-      ...months.map((_, i) => ({ s: { r: 1, c: 1 + i * 2 }, e: { r: 1, c: 2 + i * 2 } })),
-    ];
-
-    ws["!cols"] = [{ wch: 14 }, ...Array(24).fill({ wch: 10 })];
-    ws["!rows"] = [
-      { hpt: 30 },
-      { hpt: 25 },
-      { hpt: 20 },
-      ...Array(16).fill({ hpt: 18 }),
-      { hpt: 35 },
-    ];
-    ws["!dir"] = "rtl";
-    wb.Workbook = { Views: [{ RTL: true }] };
-
-    const totalRows = wsData.length;
-    const totalCols = 25;
-
-    for (let r = 0; r < totalRows; r++) {
-      for (let c = 0; c < totalCols; c++) {
-        const cellRef = XLSX.utils.encode_cell({ r, c });
-        if (!ws[cellRef]) ws[cellRef] = { v: "", t: "s" };
-
-        const isHeaderRow = r === 0 || r === 1 || r === 2;
-        const isTotalRow = r === totalRows - 1;
-        const isEvenRow = r % 2 === 0;
-
-        if (isHeaderRow || isTotalRow) {
-          ws[cellRef].s = {
-            fill: { fgColor: { rgb: "1a3c6e" } },
-            font: { bold: true, color: { rgb: "FFFFFF" }, sz: r === 0 ? 14 : 11 },
-            alignment: { horizontal: "center", vertical: "center", wrapText: true },
-            border: {
-              top:    { style: "thin", color: { rgb: "FFFFFF" } },
-              bottom: { style: "thin", color: { rgb: "FFFFFF" } },
-              left:   { style: "thin", color: { rgb: "FFFFFF" } },
-              right:  { style: "thin", color: { rgb: "FFFFFF" } },
-            }
-          };
-        } else {
-          ws[cellRef].s = {
-            fill: { fgColor: { rgb: isEvenRow ? "f0f4f8" : "FFFFFF" } },
-            font: { sz: 11, color: { rgb: "1a3c6e" } },
-            alignment: { horizontal: "center", vertical: "center" },
-            border: {
-              top:    { style: "thin", color: { rgb: "d0d7e3" } },
-              bottom: { style: "thin", color: { rgb: "d0d7e3" } },
-              left:   { style: "thin", color: { rgb: "d0d7e3" } },
-              right:  { style: "thin", color: { rgb: "d0d7e3" } },
-            }
-          };
-        }
+  for (let r = 0; r < totalRows; r++) {
+    for (let c = 0; c < totalCols; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r, c });
+      if (!ws[cellRef]) ws[cellRef] = { v: "", t: "s" };
+      const isHeaderRow = r === 0 || r === 1 || r === 2;
+      const isTotalRow = r === totalRows - 1;
+      const isEvenRow = r % 2 === 0;
+      if (isHeaderRow || isTotalRow) {
+        ws[cellRef].s = {
+          fill: { fgColor: { rgb: "1a3c6e" } },
+          font: { bold: true, color: { rgb: "FFFFFF" }, sz: r === 0 ? 14 : 11 },
+          alignment: { horizontal: "center", vertical: "center", wrapText: true },
+          border: {
+            top: { style: "thin", color: { rgb: "FFFFFF" } },
+            bottom: { style: "thin", color: { rgb: "FFFFFF" } },
+            left: { style: "thin", color: { rgb: "FFFFFF" } },
+            right: { style: "thin", color: { rgb: "FFFFFF" } },
+          },
+        };
+      } else {
+        ws[cellRef].s = {
+          fill: { fgColor: { rgb: isEvenRow ? "f0f4f8" : "FFFFFF" } },
+          font: { sz: 11, color: { rgb: "1a3c6e" } },
+          alignment: { horizontal: "center", vertical: "center" },
+          border: {
+            top: { style: "thin", color: { rgb: "d0d7e3" } },
+            bottom: { style: "thin", color: { rgb: "d0d7e3" } },
+            left: { style: "thin", color: { rgb: "d0d7e3" } },
+            right: { style: "thin", color: { rgb: "d0d7e3" } },
+          },
+        };
       }
     }
+  }
+};
 
-    XLSX.utils.book_append_sheet(wb, ws, "Rapport " + year);
-    XLSX.writeFile(wb, "rapport-depot-" + year + ".xlsx");
+/* ─────────────────── Section Charts component ─────────────────── */
+
+const SectionCharts = ({
+  label,
+  color,
+  monthlyData,
+  categoryData,
+  totalCount,
+  totalAmount,
+  year,
+  countLabel,
+}: {
+  label: string;
+  color: string;
+  monthlyData: { name: string; depots: number; montant: number }[];
+  categoryData: { name: string; depots: number }[];
+  totalCount: number;
+  totalAmount: number;
+  year: number;
+  countLabel: string;
+}) => (
+  <div className="flex flex-col gap-4">
+    {/* Section title */}
+    <h3 className="text-base font-bold tracking-tight" style={{ color: "hsl(var(--foreground))" }}>
+      {label}
+    </h3>
+
+    {/* Stat cards */}
+    <div className="grid grid-cols-2 gap-3">
+      <div className="paper-form p-4 flex items-center gap-3" style={{ borderLeft: `4px solid ${color}` }}>
+        <div>
+          <p className="text-xl font-bold" style={{ color: "hsl(var(--foreground))" }}>{totalCount}</p>
+          <p className="text-[11px] mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>Total {year}</p>
+        </div>
+      </div>
+      <div className="paper-form p-4 flex items-center gap-3" style={{ borderLeft: "4px solid #10b981" }}>
+        <div>
+          <p className="text-xl font-bold" style={{ color: "hsl(var(--foreground))" }}>{totalAmount.toLocaleString()} DT</p>
+          <p className="text-[11px] mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>Montant {year}</p>
+        </div>
+      </div>
+    </div>
+
+    {/* Chart — count per month */}
+    <div className="paper-form overflow-hidden">
+      <div className="px-4 py-3" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+        <h4 className="text-xs font-semibold" style={{ color: "hsl(var(--foreground))" }}>
+          {countLabel} par mois
+        </h4>
+      </div>
+      <div className="p-3">
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 20% 88%)" />
+            <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(215 15% 50%)" }} tickLine={false} axisLine={{ stroke: "hsl(215 20% 88%)" }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "hsl(215 15% 50%)" }} tickLine={false} axisLine={{ stroke: "hsl(215 20% 88%)" }} />
+            <Tooltip contentStyle={tooltipStyle} labelStyle={{ fontWeight: 600, color }} formatter={(value) => [value, countLabel]} />
+            <Bar dataKey="depots" fill={color} radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+
+    {/* Chart — amount per month */}
+    <div className="paper-form overflow-hidden">
+      <div className="px-4 py-3" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+        <h4 className="text-xs font-semibold" style={{ color: "hsl(var(--foreground))" }}>
+          Montant par mois (DT)
+        </h4>
+      </div>
+      <div className="p-3">
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -15, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 20% 88%)" />
+            <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(215 15% 50%)" }} tickLine={false} axisLine={{ stroke: "hsl(215 20% 88%)" }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "hsl(215 15% 50%)" }} tickLine={false} axisLine={{ stroke: "hsl(215 20% 88%)" }} />
+            <Tooltip contentStyle={tooltipStyle} labelStyle={{ fontWeight: 600, color: "#10b981" }} formatter={(value) => [`${value} DT`, "Montant"]} />
+            <Bar dataKey="montant" fill="#10b981" radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+
+    {/* Chart — by category */}
+    {categoryData.length > 0 && (
+      <div className="paper-form overflow-hidden">
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+          <h4 className="text-xs font-semibold" style={{ color: "hsl(var(--foreground))" }}>
+            {countLabel} par categorie
+          </h4>
+        </div>
+        <div className="p-3">
+          <ResponsiveContainer width="100%" height={Math.max(200, categoryData.length * 32)}>
+            <BarChart data={categoryData} layout="vertical" margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 20% 88%)" horizontal={false} />
+              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: "hsl(215 15% 50%)" }} tickLine={false} axisLine={{ stroke: "hsl(215 20% 88%)" }} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(215 15% 50%)" }} tickLine={false} axisLine={{ stroke: "hsl(215 20% 88%)" }} width={50} />
+              <Tooltip contentStyle={tooltipStyle} labelStyle={{ fontWeight: 600, color: "#3b82f6" }} formatter={(value) => [value, countLabel]} />
+              <Bar dataKey="depots" fill="#3b82f6" radius={[0, 3, 3, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    )}
+  </div>
+);
+
+/* ─────────────────── Main page ─────────────────── */
+
+const RapportsPage = () => {
+  const navigate = useNavigate();
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [depotData, setDepotData] = useState<ReportData | null>(null);
+  const [renouvData, setRenouvData] = useState<ReportData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchReports = useCallback(async (y: number) => {
+    const token = getToken();
+    if (!token) { navigate("/"); return; }
+    setLoading(true);
+    setError("");
+    try {
+      const [depotRes, renouvRes] = await Promise.all([
+        fetch(`http://localhost:5000/admin/rapports/yearly?year=${y}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`http://localhost:5000/admin/rapports/yearly-renouv?year=${y}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+      if (!depotRes.ok) throw new Error("Erreur lors du chargement du rapport depots");
+      if (!renouvRes.ok) throw new Error("Erreur lors du chargement du rapport renouvellements");
+      const [dJson, rJson]: [ReportData, ReportData] = await Promise.all([depotRes.json(), renouvRes.json()]);
+      setDepotData(dJson);
+      setRenouvData(rJson);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+      setDepotData(null);
+      setRenouvData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
+
+  useEffect(() => { fetchReports(year); }, [year, fetchReports]);
+
+  // Depot data
+  const depotRows = buildRows(depotData);
+  const depotTotals = buildTotals(depotRows);
+  const depotGrandCount = depotTotals.reduce((s, t) => s + t.count, 0);
+  const depotGrandAmount = depotGrandCount * 30;
+  const depotMonthly = buildMonthlyChart(depotTotals, 30);
+  const depotCategory = buildCategoryChart(depotRows);
+
+  // Renouvellement data
+  const renouvRows = buildRows(renouvData);
+  const renouvTotals = buildTotals(renouvRows);
+  const renouvGrandCount = renouvTotals.reduce((s, t) => s + t.count, 0);
+  const renouvGrandAmount = renouvGrandCount * 30;
+  const renouvMonthly = buildMonthlyChart(renouvTotals, 30);
+  const renouvCategory = buildCategoryChart(renouvRows);
+
+  // Combined
+  const combinedCount = depotGrandCount + renouvGrandCount;
+  const combinedAmount = depotGrandAmount + renouvGrandAmount;
+
+  const hasData = (depotData && depotData.report.length > 0) || (renouvData && renouvData.report.length > 0);
+
+  // Excel export — 2 sheets
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+    wb.Workbook = { Views: [{ RTL: true }] };
+
+    // Sheet 1 — Depots
+    const depotWsData = buildSheetData(depotRows, depotTotals, "إيداع سنة " + year);
+    const depotWs = XLSX.utils.aoa_to_sheet(depotWsData);
+    styleSheet(depotWs, depotWsData.length);
+    XLSX.utils.book_append_sheet(wb, depotWs, `Dépôts ${year}`);
+
+    // Sheet 2 — Renouvellements
+    const renouvWsData = buildSheetData(renouvRows, renouvTotals, "تجديد سنة " + year);
+    const renouvWs = XLSX.utils.aoa_to_sheet(renouvWsData);
+    styleSheet(renouvWs, renouvWsData.length);
+    XLSX.utils.book_append_sheet(wb, renouvWs, `Renouvellements ${year}`);
+
+    XLSX.writeFile(wb, `rapport-depot-renouv-${year}.xlsx`);
   };
-
-  const hasData = data && data.report.length > 0;
 
   return (
     <div className="p-6 lg:p-8">
@@ -197,7 +341,7 @@ const RapportsPage = () => {
             Rapports / التقارير
           </h2>
           <p className="text-sm mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
-            Rapport annuel des depots
+            Rapport annuel des depots et renouvellements
           </p>
         </div>
 
@@ -269,20 +413,49 @@ const RapportsPage = () => {
       {/* Main content */}
       {!loading && !error && hasData && (
         <>
-          {/* ===== STAT CARDS ===== */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <div className="paper-form p-5 flex items-center gap-4" style={{ borderLeft: "4px solid #1a3c6e" }}>
+          {/* ===== TWO SECTIONS SIDE BY SIDE ===== */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* LEFT — Depots */}
+            <SectionCharts
+              label="Depots / الإيداعات"
+              color="#1a3c6e"
+              monthlyData={depotMonthly}
+              categoryData={depotCategory}
+              totalCount={depotGrandCount}
+              totalAmount={depotGrandAmount}
+              year={year}
+              countLabel="Depots"
+            />
+
+            {/* RIGHT — Renouvellements */}
+            <SectionCharts
+              label="Renouvellements / التجديدات"
+              color="#f97316"
+              monthlyData={renouvMonthly}
+              categoryData={renouvCategory}
+              totalCount={renouvGrandCount}
+              totalAmount={renouvGrandAmount}
+              year={year}
+              countLabel="Renouvellements"
+            />
+          </div>
+
+          {/* ===== TOTAL SECTION ===== */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="paper-form p-5 flex items-center gap-4" style={{ borderLeft: "4px solid #8b5cf6" }}>
               <div
                 className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: "rgba(26,60,110,0.1)" }}
+                style={{ background: "rgba(139,92,246,0.1)" }}
               >
-                <svg className="w-6 h-6" style={{ color: "#1a3c6e" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-6 h-6" style={{ color: "#8b5cf6" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                 </svg>
               </div>
               <div>
-                <p className="text-2xl font-bold" style={{ color: "hsl(var(--foreground))" }}>{grandTotalCount}</p>
-                <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>Total depots {year}</p>
+                <p className="text-2xl font-bold" style={{ color: "hsl(var(--foreground))" }}>{combinedCount}</p>
+                <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  Total depots + renouvellements {year}
+                </p>
               </div>
             </div>
             <div className="paper-form p-5 flex items-center gap-4" style={{ borderLeft: "4px solid #10b981" }}>
@@ -295,77 +468,13 @@ const RapportsPage = () => {
                 </svg>
               </div>
               <div>
-                <p className="text-2xl font-bold" style={{ color: "hsl(var(--foreground))" }}>{grandTotalAmount.toLocaleString()} DT</p>
-                <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>Montant total (DT)</p>
+                <p className="text-2xl font-bold" style={{ color: "hsl(var(--foreground))" }}>{combinedAmount.toLocaleString()} DT</p>
+                <p className="text-xs mt-0.5" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  Montant total combine (DT)
+                </p>
               </div>
             </div>
           </div>
-
-          {/* ===== CHARTS ROW 1 — side by side ===== */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            {/* Chart 1 — Depots per month */}
-            <div className="paper-form overflow-hidden">
-              <div className="px-5 py-4" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
-                <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
-                  Nombre de depots par mois
-                </h3>
-              </div>
-              <div className="p-4">
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={monthlyChartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 20% 88%)" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(215 15% 50%)" }} tickLine={false} axisLine={{ stroke: "hsl(215 20% 88%)" }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(215 15% 50%)" }} tickLine={false} axisLine={{ stroke: "hsl(215 20% 88%)" }} />
-                    <Tooltip contentStyle={tooltipStyle} labelStyle={{ fontWeight: 600, color: "#1a3c6e" }} formatter={(value) => [value, "Depots"]} />
-                    <Bar dataKey="depots" fill="#1a3c6e" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Chart 2 — Amount per month */}
-            <div className="paper-form overflow-hidden">
-              <div className="px-5 py-4" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
-                <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
-                  Montant total par mois (DT)
-                </h3>
-              </div>
-              <div className="p-4">
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={monthlyChartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 20% 88%)" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(215 15% 50%)" }} tickLine={false} axisLine={{ stroke: "hsl(215 20% 88%)" }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(215 15% 50%)" }} tickLine={false} axisLine={{ stroke: "hsl(215 20% 88%)" }} />
-                    <Tooltip contentStyle={tooltipStyle} labelStyle={{ fontWeight: 600, color: "#10b981" }} formatter={(value) => [`${value} DT`, "Montant"]} />
-                    <Bar dataKey="montant" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          {/* ===== CHART 3 — Horizontal bar by category ===== */}
-          {categoryChartData.length > 0 && (
-            <div className="paper-form overflow-hidden mb-6">
-              <div className="px-5 py-4" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
-                <h3 className="text-sm font-semibold" style={{ color: "hsl(var(--foreground))" }}>
-                  Depots par categorie (annee complete)
-                </h3>
-              </div>
-              <div className="p-4">
-                <ResponsiveContainer width="100%" height={Math.max(280, categoryChartData.length * 36)}>
-                  <BarChart data={categoryChartData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 20% 88%)" horizontal={false} />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(215 15% 50%)" }} tickLine={false} axisLine={{ stroke: "hsl(215 20% 88%)" }} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "hsl(215 15% 50%)" }} tickLine={false} axisLine={{ stroke: "hsl(215 20% 88%)" }} width={60} />
-                    <Tooltip contentStyle={tooltipStyle} labelStyle={{ fontWeight: 600, color: "#3b82f6" }} formatter={(value) => [value, "Depots"]} />
-                    <Bar dataKey="depots" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-
         </>
       )}
     </div>

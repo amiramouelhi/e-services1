@@ -1,22 +1,22 @@
 function errorHandler(err, req, res, next) {
-  console.error(err) 
+  // Always log the real error in the terminal only
+  console.error('=== ERROR ===', err)
 
-  // Prisma unique constraint
+  // Prisma known errors — show friendly messages
   if (err.code === 'P2002') {
     return res.status(409).json({ error: 'Cet enregistrement existe déjà' })
   }
-
-  // Prisma record not found
   if (err.code === 'P2025') {
     return res.status(404).json({ error: 'Enregistrement non trouvé' })
   }
-
-  // Prisma foreign key constraint — can't delete because record is used elsewhere
   if (err.code === 'P2003') {
-    return res.status(409).json({ error: 'Impossible de supprimer cet enregistrement car il est lié à d\'autres données' })
+    return res.status(409).json({ error: 'Impossible de supprimer — des données liées existent' })
+  }
+  if (err.code === 'P2014') {
+    return res.status(409).json({ error: 'Relation invalide entre les données' })
   }
 
-  // Generic error — never show real message in production
+  // Never expose real error message to user
   res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
 }
 

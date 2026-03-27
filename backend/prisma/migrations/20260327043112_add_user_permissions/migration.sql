@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "canDepot" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "canFCS" BOOLEAN NOT NULL DEFAULT false;

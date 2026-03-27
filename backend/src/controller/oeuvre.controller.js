@@ -33,7 +33,8 @@ exports.createOeuvre = async (req, res) => {
 
     res.status(201).json(oeuvre);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -46,7 +47,8 @@ exports.getAllOeuvres = async (req, res) => {
     });
     res.json(oeuvres);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -66,7 +68,8 @@ exports.getOeuvreById = async (req, res) => {
 
     res.json(oeuvre);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -109,7 +112,8 @@ exports.updateOeuvre = async (req, res) => {
 
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
 
@@ -123,6 +127,7 @@ exports.deleteOeuvre = async (req, res) => {
     await prisma.oeuvre.delete({ where: { id } });
     res.json({ message: "Oeuvre supprimée avec succès" });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' });
   }
 };
