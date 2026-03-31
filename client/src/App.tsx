@@ -8,7 +8,13 @@ import FacturePage from "./pages/FacturePage"
 import RenouvellementPage from "./pages/RenouvellementPage"
 import IndemnitesOccasionnellesPage from "./pages/IndemnitesOccasionnellesPage"
 import FcsPage from "./pages/FcsPage"
-
+import StatistiquesPage from "./pages/StatistiquesShared"
+import RegistreGeneralPage from "./pages/RegistreGeneral"
+import RegistreAnnuelPage from "./pages/RegistreAnnuel"
+import ParCategoriePage from "./pages/ParCategorie"
+import ParDeposantPage from "./pages/ParDeposant"
+import ParAuteurPage from "./pages/ParAuteur"
+import ParGouvernoratPage from "./pages/ParGouvernorat"
 export default function App() {
   return (
     <Routes>
@@ -23,6 +29,13 @@ export default function App() {
       <Route path="/renouvellement" element={<RenouvellementPage />} />
       <Route path="/indemnites-occasionnelles" element={<IndemnitesOccasionnellesPage />} />
       <Route path="/fcs" element={<FcsPage />} />
+      <Route path="/statistiques" element={<StatistiquesPage />} />
+      <Route path="/statistiques/registre-general" element={<RegistreGeneralPage />} />
+      <Route path="/statistiques/registre-annuel" element={<RegistreAnnuelPage />} />
+      <Route path="/statistiques/par-categorie" element={<ParCategoriePage />} />
+      <Route path="/statistiques/par-deposant" element={<ParDeposantPage />} />
+      <Route path="/statistiques/par-auteur" element={<ParAuteurPage />} />
+      <Route path="/statistiques/par-gouvernorat" element={<ParGouvernoratPage />} />
     </Routes>
   )
 }

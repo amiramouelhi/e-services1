@@ -91,9 +91,9 @@ export default DashboardPage;
 export const DepotDashboard = () => {
   const navigate = useNavigate();
   const cards: DashCard[] = [
-    { ar: "إيداع", fr: "Dépôt", path: "/deposit" },
-    { ar: "تجديد", fr: "Renouvellement", path: "/renouvellement" },
-    { ar: "الحالة", fr: "État", path: "/mes-depots" },
+    { ar: "  إيداع جديد ", fr: "Dépôt", path: "/deposit" },
+    { ar: " تجديد إيداع", fr: "Renouvellement", path: "/renouvellement" },
+    { ar: "إحصائيات", fr: "Statistiques", path: "/statistiques" },
   ];
 
   return (

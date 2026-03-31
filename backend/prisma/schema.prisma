@@ -45,6 +45,7 @@ model Deposant {
   cin              String? @unique
   raisonSociale    String? @unique
   registreCommerce String?
+  representantLegal String?
   rue          String?
   cite         String?
   gouvernorat  String?
@@ -105,7 +106,7 @@ model Depot {
   statut                     Statut    @default(CERTIFIE)
   konnectPaymentRef          String?
   motifRejet      String?
-
+  fichierFacture  String?
   userId     Int
   user       User     @relation(fields: [userId], references: [id])
 

@@ -50,8 +50,16 @@ const Tr = {
     step1FormatError: "صيغة غير مدعومة. استخدم PDF أو JPG أو PNG.",
     step1SizeError: "حجم الملف لا يجب أن يتجاوز 5 ميغابايت.",
     step2Title: "البحث عن الإيداع",
-    step2Placeholder: "البحث بالـ CIN أو رقم الإيداع أو MF أو RNE",
     step2BackToStep1: "رجوع إلى المرحلة 1",
+    searchTypeCIN: "بطاقة التعريف",
+    searchTypeMF: "المعرف الجبائي",
+    searchTypeRNE: "السجل الوطني للمؤسسات",
+    searchTypeNumero: "رقم الإيداع",
+    searchPlaceholder: "أدخل مصطلح البحث...",
+    searchBtn: "بحث",
+    searchErrNoField: "يرجى اختيار نوع البحث",
+    searchErrNoInput: "يرجى إدخال مصطلح البحث",
+    searching: "...جارٍ البحث",
     colNumero: "رقم الإيداع",
     colDeposant: "المودع",
     colTitre: "عنوان المصنف",
@@ -78,8 +86,16 @@ const Tr = {
     step1FormatError: "Format non supporté. Utilisez PDF, JPG ou PNG.",
     step1SizeError: "Le fichier ne doit pas dépasser 5 Mo.",
     step2Title: "Rechercher le dépôt",
-    step2Placeholder: "Rechercher par CIN, numéro de dépôt, MF ou RNE",
     step2BackToStep1: "Retour à l'étape 1",
+    searchTypeCIN: "CIN",
+    searchTypeMF: "MF",
+    searchTypeRNE: "RNE",
+    searchTypeNumero: "Numéro de dépôt",
+    searchPlaceholder: "Saisir votre recherche...",
+    searchBtn: "Rechercher",
+    searchErrNoField: "Veuillez sélectionner au moins un type de recherche",
+    searchErrNoInput: "Veuillez saisir un terme de recherche",
+    searching: "Recherche en cours...",
     colNumero: "Numéro de dépôt",
     colDeposant: "Déposant",
     colTitre: "Titre de l'oeuvre",
@@ -104,9 +120,13 @@ const RenouvellementPage = () => {
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [allDepots, setAllDepots] = useState<Depot[]>([]);
-  const [loadingDepots, setLoadingDepots] = useState(false);
-  const [loadError, setLoadError] = useState("");
+  const [selectedField, setSelectedField] = useState("");
+  const [searchResults, setSearchResults] = useState<Depot[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [fieldError, setFieldError] = useState("");
+  const [inputError, setInputError] = useState("");
   const [renewingId, setRenewingId] = useState<number | null>(null);
   const [renewError, setRenewError] = useState("");
 
@@ -120,36 +140,34 @@ const RenouvellementPage = () => {
     if (!localStorage.getItem("token")) navigate("/");
   }, [navigate]);
 
-  useEffect(() => {
-    if (step !== 2) return;
+  const handleSearch = async () => {
+    setFieldError("");
+    setInputError("");
+    setSearchError("");
+    if (!selectedField) {
+      setFieldError(t.searchErrNoField);
+      return;
+    }
+    if (!searchQuery.trim()) {
+      setInputError(t.searchErrNoInput);
+      return;
+    }
     const token = localStorage.getItem("token");
-    if (!token) return;
-    setLoadingDepots(true);
-    setLoadError("");
-    fetch("http://localhost:5000/depots", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(t.loadError);
-        return res.json();
-      })
-      .then((data: Depot[]) => setAllDepots(data))
-      .catch((err: any) => setLoadError(err.message))
-      .finally(() => setLoadingDepots(false));
-  }, [step]);
-
-  const filteredDepots = allDepots.filter((depot) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.trim().toLowerCase();
-    return [
-      depot.deposant.cin,
-      depot.deposant.nomComplet_fr,
-      depot.deposant.nomComplet_ar,
-      depot.deposant.raisonSociale,
-      depot.deposant.registreCommerce,
-      depot.numeroSequentiel != null ? String(depot.numeroSequentiel) : null,
-    ].some((field) => field && field.toLowerCase().includes(q));
-  });
+    if (!token) { navigate("/"); return; }
+    setSearchLoading(true);
+    try {
+      const url = `http://localhost:5000/depots/search?q=${encodeURIComponent(searchQuery.trim())}&fields=${selectedField}`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t.loadError);
+      setSearchResults(data);
+      setHasSearched(true);
+    } catch (err: any) {
+      setSearchError(err.message);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
@@ -333,7 +351,7 @@ const RenouvellementPage = () => {
           </div>
         )}
 
-        {/* Step 2 — Browse & renew */}
+        {/* Step 2 — Search & renew */}
         {step === 2 && (
           <>
             {/* Back button */}
@@ -355,46 +373,84 @@ const RenouvellementPage = () => {
               </div>
             )}
 
-            {/* Load error */}
-            {loadError && (
-              <div className="mb-4 px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
-                {loadError}
+            {/* Search card */}
+            <div className="paper-form overflow-hidden mb-4">
+              <div className="px-5 py-4 border-b border-border" style={{ background: "hsl(215 45% 94%)" }}>
+                <h2 className="text-lg font-bold text-foreground tracking-tight">{t.step2Title}</h2>
               </div>
-            )}
-
-            {/* Loading */}
-            {loadingDepots && (
-              <div className="paper-form px-6 py-16 flex flex-col items-center justify-center gap-3">
-                <div className="w-8 h-8 border-[3px] border-primary/20 border-t-primary rounded-full animate-spin" />
-                <p className="text-sm text-muted-foreground">{t.loadingDepots}</p>
-              </div>
-            )}
-
-            {/* Table with search */}
-            {!loadingDepots && !loadError && (
-              <div className="paper-form overflow-hidden">
-                {/* Search input */}
-                <div className="px-5 py-4 border-b border-border" style={{ background: "hsl(215 45% 94%)" }}>
-                  <div className="flex items-center gap-3" dir="ltr">
-                    <h2 className="text-lg font-bold text-foreground tracking-tight whitespace-nowrap">
-                      {t.step2Title}
-                    </h2>
-                    <div className="relative flex-1">
-                      <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={t.step2Placeholder}
-                        className="input-field w-full pl-9"
-                      />
-                    </div>
+              <div className="px-5 py-4 space-y-4">
+                {/* Search type checkboxes */}
+                <div>
+                  <div className="flex flex-wrap gap-4" dir="ltr">
+                    {([
+                      { key: "cin",    label: t.searchTypeCIN },
+                      { key: "mf",     label: t.searchTypeMF },
+                      { key: "rne",    label: t.searchTypeRNE },
+                      { key: "numero", label: t.searchTypeNumero },
+                    ] as const).map(({ key, label }) => (
+                      <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={selectedField === key}
+                          onChange={() => {
+                            setSelectedField(selectedField === key ? "" : key);
+                            setFieldError("");
+                          }}
+                          className="accent-primary"
+                          style={{ width: "16px", height: "16px" }}
+                        />
+                        <span className="text-sm font-medium text-foreground">{label}</span>
+                      </label>
+                    ))}
                   </div>
+                  {fieldError && (
+                    <p className="mt-1.5 text-xs text-destructive">{fieldError}</p>
+                  )}
                 </div>
 
-                {filteredDepots.length > 0 ? (
+                {/* Search input + button */}
+                <div className="flex items-start gap-3" dir="ltr">
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => { setSearchQuery(e.target.value); setInputError(""); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
+                      placeholder={t.searchPlaceholder}
+                      className={`input-field w-full ${inputError ? "border-destructive" : ""}`}
+                      disabled={searchLoading}
+                    />
+                    {inputError && (
+                      <p className="mt-1 text-xs text-destructive">{inputError}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleSearch}
+                    disabled={searchLoading}
+                    className="btn-primary flex items-center gap-2 px-5 py-2.5 disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {searchLoading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    )}
+                    {searchLoading ? t.searching : t.searchBtn}
+                  </button>
+                </div>
+
+                {/* Search API error */}
+                {searchError && (
+                  <p className="text-xs text-destructive">{searchError}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Results table — only after search */}
+            {hasSearched && !searchLoading && (
+              <div className="paper-form overflow-hidden">
+                {searchResults.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm" dir="ltr">
                       <thead>
@@ -408,14 +464,12 @@ const RenouvellementPage = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {filteredDepots.map((depot) => {
+                        {searchResults.map((depot) => {
                           const cfg = statutConfig[depot.statut] || defaultCfg;
                           const canRenew = RENEWABLE_STATUTS.includes(depot.statut);
                           return (
                             <tr key={depot.id} className="hover:bg-muted/30 transition-colors">
-                              <td className="px-5 py-4 text-foreground font-medium">
-                                {formatNumero(depot)}
-                              </td>
+                              <td className="px-5 py-4 text-foreground font-medium">{formatNumero(depot)}</td>
                               <td className="px-5 py-4 text-muted-foreground">
                                 {depot.deposant.nomComplet_fr || depot.deposant.nomComplet_ar || depot.deposant.raisonSociale || "—"}
                               </td>
@@ -459,7 +513,7 @@ const RenouvellementPage = () => {
                     <svg className="w-12 h-12 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    <p className="text-sm text-muted-foreground">{t.noResult}</p>
+                    <p className="text-sm text-muted-foreground">{t.noResult} / لم يتم العثور على إيداع</p>
                   </div>
                 )}
               </div>

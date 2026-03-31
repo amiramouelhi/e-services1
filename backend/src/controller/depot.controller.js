@@ -5,7 +5,7 @@ exports.createDepot = async (req, res) => {
   try {
     const userId = req.userId;
     const {
-      nomComplet, cin, raisonSociale, registreCommerce,
+      nomComplet, cin, raisonSociale, registreCommerce,representantLegal,
       rue, cite, gouvernorat, ville, codePostal,
       telephone, fax, email,
       titre, description, typeSupport, categorieId,
@@ -65,6 +65,7 @@ const depot = await prisma.$transaction(async (tx) => {
     fichierRNE,
     fichierProcuration,
     fichierDossierJuridique,
+    representantLegal: representantLegal?.trim() || null,
     isAuteur:   isAuteur   === 'true' || isAuteur   === true,
     isNon:      isNon      === 'true' || isNon      === true,
     isCoAuteur: isCoAuteur === 'true' || isCoAuteur === true,
@@ -129,23 +130,13 @@ const depot = await prisma.$transaction(async (tx) => {
     })
   )
 
-  // 4. Count depots per category for numeroSequentiel
-  const depotCount = await tx.depot.count({
-    where: {
-      oeuvre: {
-        categorieId: parseInt(categorieId)
-      }
-    }
-  })
-  const autoNumeroSequentiel = depotCount + 1
-
   // 5. Create depot
   return await tx.depot.create({
     data: {
       dateDepot:                  new Date(dateDepot),
       montant:                    30,
       statut:                     "CERTIFIE",
-      numeroSequentiel:           autoNumeroSequentiel,
+      numeroSequentiel: null,
       numeroEnregistrementBureau: numeroEnregistrementBureau || null,
       numeroRegistreInterne:      numeroRegistreInterne      || null,
       numeroRecuPaiement:         numeroRecuPaiement         || null,
@@ -261,21 +252,37 @@ exports.payerDepot = async (req, res) => {
     const id = parseInt(req.params.id)
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" })
 
-    const { numeroRecuPaiement } = req.body
-    if (!numeroRecuPaiement?.trim()) {
-      return res.status(400).json({ error: "Numéro de facture est obligatoire" })
+    const fichierFacture = req.files?.fichierFacture?.[0]?.filename || null
+    if (!fichierFacture) {
+      return res.status(400).json({ error: "Le fichier facture est obligatoire" })
     }
 
-    // Calculate expiration date (1 year from now)
+    // Get the depot to find its category
+    const existingDepot = await prisma.depot.findUnique({
+      where: { id },
+      include: { oeuvre: true }
+    })
+    if (!existingDepot) return res.status(404).json({ error: "Dépôt non trouvé" })
+
+    // Generate numeroSequentiel per category
+    const depotCount = await prisma.depot.count({
+      where: {
+        oeuvre: { categorieId: existingDepot.oeuvre.categorieId },
+        numeroSequentiel: { not: null } // only count paid depots
+      }
+    })
+    const numeroSequentiel = depotCount + 1
+
     const dateExpiration = new Date()
     dateExpiration.setFullYear(dateExpiration.getFullYear() + 1)
 
     const depot = await prisma.depot.update({
       where: { id },
       data: {
-        statut: "PAYE",
-        numeroRecuPaiement: numeroRecuPaiement.trim(),
-        dateExpiration 
+        statut: "CERTIFIE",
+        fichierFacture,
+        numeroSequentiel, // assigned here after payment
+        dateExpiration
       }
     })
 
@@ -284,23 +291,39 @@ exports.payerDepot = async (req, res) => {
     console.error(error)
     res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
   }
-};
+}
 
 // SEARCH DEPOTS
 exports.searchDepots = async (req, res) => {
   try {
-    const { q } = req.query
-    if (!q?.trim()) return res.status(400).json({ error: "Paramètre de recherche requis" })
+    const searchFields = req.query.fields?.split(',').filter(Boolean) || []
+    const q = req.query.q?.trim()
+
+    if (!q) return res.status(400).json({ error: "Paramètre de recherche requis" })
+    if (searchFields.length === 0) return res.status(400).json({ error: "Aucun champ de recherche sélectionné" })
+
+    const orConditions = []
+
+    if (searchFields.includes('cin')) {
+      orConditions.push({ deposant: { cin: { contains: q } } })
+    }
+    if (searchFields.includes('mf')) {
+      orConditions.push({ deposant: { registreCommerce: { contains: q, mode: 'insensitive' } } })
+    }
+    if (searchFields.includes('rne')) {
+      orConditions.push({ deposant: { raisonSociale: { contains: q, mode: 'insensitive' } } })
+    }
+    if (searchFields.includes('numero')) {
+      const num = parseInt(q)
+      if (!isNaN(num)) orConditions.push({ numeroSequentiel: num })
+    }
+
+    if (orConditions.length === 0) {
+      return res.status(400).json({ error: "Aucun champ de recherche sélectionné" })
+    }
 
     const depots = await prisma.depot.findMany({
-      where: {
-        OR: [
-          { deposant: { cin: { contains: q.trim() } } },
-          { deposant: { raisonSociale: { contains: q.trim(), mode: 'insensitive' } } },
-          { deposant: { registreCommerce: { contains: q.trim(), mode: 'insensitive' } } },
-          { numeroSequentiel: isNaN(parseInt(q)) ? undefined : parseInt(q) },
-        ]
-      },
+      where: { OR: orConditions },
       include: {
         deposant: true,
         oeuvre: { include: { categorie: true } },

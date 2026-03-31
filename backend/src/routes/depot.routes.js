@@ -11,6 +11,7 @@ const uploadFields = upload.fields([
   { name: "fichierRNE",              maxCount: 1 },
   { name: "fichierProcuration",      maxCount: 1 },
   { name: "fichierDossierJuridique", maxCount: 1 },
+  { name: "fichierFacture",          maxCount: 1 },
 ]);
 
 router.post("/", authMiddleware, uploadFields, controller.createDepot);

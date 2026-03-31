@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -9,7 +9,19 @@ interface Depot {
   dateDepot: string;
   dateRenouvellement: string | null;
   montant: number;
-  deposant: { nomComplet_fr?: string; nomComplet_ar?: string; raisonSociale?: string };
+  deposant: {
+    nomComplet_fr?: string;
+    nomComplet_ar?: string;
+    raisonSociale?: string;
+    cin?: string;
+    registreCommerce?: string;
+    rue?: string;
+    cite?: string;
+    gouvernorat?: string;
+    ville?: string;
+    telephone?: string;
+    email?: string;
+  };
   oeuvre: {
     titre_fr?: string;
     titre_ar?: string;
@@ -35,6 +47,28 @@ interface CertData {
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const fmt = (dateStr: string | null): string => {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+};
+
+const PreviewRow = ({ label, value }: { label: string; value: string }) => (
+  <div style={{ display: "flex", gap: "12px", padding: "8px 0", borderBottom: "0.5px solid #e5e7eb" }}>
+    <span style={{ fontSize: "14px", fontWeight: 600, color: "#374151", minWidth: "140px", flexShrink: 0 }}>{label} :</span>
+    <span style={{ fontSize: "14px", color: "#1f2937", wordBreak: "break-word" }}>{value || "—"}</span>
+  </div>
+);
+
+const PreviewSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div style={{ marginBottom: "20px" }}>
+    <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#1a3c6e", borderBottom: "2px solid #1a3c6e", paddingBottom: "6px", marginBottom: "12px" }}>
+      {title}
+    </h3>
+    {children}
+  </div>
+);
 
 function buildFrenchHTML(d: CertData): string {
   return `<div style="font-family:'Times New Roman',Georgia,serif;font-size:12px;line-height:1.7;color:#000;">
@@ -157,8 +191,10 @@ const FacturePage = () => {
   const type = new URLSearchParams(location.search).get("type");
   const isRenewal = type === "renouvellement";
   const [depot, setDepot] = useState<Depot | null>(null);
-  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [factureFile, setFactureFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState("");
   const [error, setError] = useState("");
+  const factureInputRef = useRef<HTMLInputElement>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -178,8 +214,9 @@ const FacturePage = () => {
 
   const handleSubmit = async () => {
     setError("");
-    if (!invoiceNumber.trim()) {
-      setError("Veuillez saisir le numéro de facture");
+    setFileError("");
+    if (!factureFile) {
+      setFileError("Veuillez joindre le fichier facture / يرجى إرفاق ملف الفاتورة");
       return;
     }
 
@@ -191,13 +228,12 @@ const FacturePage = () => {
 
     setLoading(true);
     try {
+      const formData = new FormData();
+      formData.append("fichierFacture", factureFile);
       const res = await fetch(`http://localhost:5000/depots/${id}/payer`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ numeroRecuPaiement: invoiceNumber }),
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -208,12 +244,6 @@ const FacturePage = () => {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleSubmit();
     }
   };
 
@@ -441,124 +471,219 @@ const FacturePage = () => {
     }
   };
 
+  const renewalExpiration = (() => {
+    if (!depot?.dateRenouvellement) return null;
+    const d = new Date(depot.dateRenouvellement);
+    d.setFullYear(d.getFullYear() + 1);
+    return fmt(d.toISOString());
+  })();
+
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 relative">
-      <button
-        onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("user"); navigate("/"); }}
-        className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground border border-border hover:border-foreground/30 transition-colors"
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Top bar */}
+      <div
+        className="flex-shrink-0 flex items-center justify-between px-6 py-3 border-b border-border/60"
+        style={{ background: "hsl(215 60% 22%)" }}
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3-3l3-3m0 0l-3-3m3 3H9" />
-        </svg>
-        Déconnexion
-      </button>
-      <div className="paper-form w-full max-w-lg p-8">
-        {/* Header */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <img
-              src="/logo.png"
-              alt="OTDAV"
-              className="h-14 w-14 object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-            <span className="text-2xl font-bold text-primary tracking-tight">
-              OTDAV
-            </span>
+        <span className="text-white font-semibold text-sm tracking-tight">OTDAV</span>
+        <button
+          onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("user"); navigate("/"); }}
+          className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3-3l3-3m0 0l-3-3m3 3H9" />
+          </svg>
+          Déconnexion
+        </button>
+      </div>
+
+      {/* Main two-column layout */}
+      <div className="flex-1 flex flex-col md:flex-row gap-6 p-6 md:p-8">
+
+        {/* LEFT — Depot preview */}
+        <div className="w-full md:w-1/2">
+          <div
+            className="paper-form overflow-y-auto"
+            style={{ padding: "24px", height: "calc(100vh - 80px)", minHeight: "100%" }}
+          >
+            <h2 className="text-base font-bold text-foreground mb-4">
+              {isRenewal ? "Renouvellement de dépôt / تجديد الإيداع" : "Récapitulatif du dépôt / ملخص الإيداع"}
+            </h2>
+
+            {!depot ? (
+              <p className="text-muted-foreground text-sm">Chargement...</p>
+            ) : (
+              <>
+                {/* Informations du dépôt */}
+                <PreviewSection title="Informations du dépôt / معلومات الإيداع">
+                  <PreviewRow
+                    label="Numéro"
+                    value={`${depot.numeroSequentiel ?? depot.id}-${depot.oeuvre.categorie.code}-${fmt(depot.dateDepot).replace(/\//g, "-")}`}
+                  />
+                  <PreviewRow label="Date" value={fmt(depot.dateDepot)} />
+                  {isRenewal && depot.dateRenouvellement && (
+                    <PreviewRow label="Date de renouvellement" value={fmt(depot.dateRenouvellement)} />
+                  )}
+                  {isRenewal && renewalExpiration && (
+                    <PreviewRow label="Nouvelle date d'expiration" value={renewalExpiration} />
+                  )}
+                </PreviewSection>
+
+                {/* Le Déposant */}
+                <PreviewSection title="Le Déposant / المودع">
+                  <PreviewRow
+                    label="Nom"
+                    value={depot.deposant.nomComplet_fr || depot.deposant.nomComplet_ar || depot.deposant.raisonSociale || "—"}
+                  />
+                  {(depot.deposant.cin || depot.deposant.registreCommerce) && (
+                    <PreviewRow label="CIN / RC" value={depot.deposant.cin || depot.deposant.registreCommerce || "—"} />
+                  )}
+                  {(depot.deposant.rue || depot.deposant.cite || depot.deposant.gouvernorat || depot.deposant.ville) && (
+                    <PreviewRow
+                      label="Adresse"
+                      value={[depot.deposant.rue, depot.deposant.cite, depot.deposant.gouvernorat, depot.deposant.ville].filter(Boolean).join(", ")}
+                    />
+                  )}
+                  {depot.deposant.telephone && <PreviewRow label="Téléphone" value={depot.deposant.telephone} />}
+                  {depot.deposant.email && <PreviewRow label="Email" value={depot.deposant.email} />}
+                </PreviewSection>
+
+                {/* L'Oeuvre */}
+                <PreviewSection title="L'Oeuvre / المصنف">
+                  <PreviewRow label="Titre" value={depot.oeuvre.titre_fr || depot.oeuvre.titre_ar || "—"} />
+                  <PreviewRow label="Catégorie" value={`${depot.oeuvre.categorie.code} - ${depot.oeuvre.categorie.nom_fr}`} />
+                  {(depot.oeuvre.typeSupport_fr || depot.oeuvre.typeSupport_ar) && (
+                    <PreviewRow label="Support" value={depot.oeuvre.typeSupport_fr || depot.oeuvre.typeSupport_ar || ""} />
+                  )}
+                  {(depot.oeuvre.description_fr || depot.oeuvre.description_ar) && (
+                    <PreviewRow label="Description" value={depot.oeuvre.description_fr || depot.oeuvre.description_ar || ""} />
+                  )}
+                </PreviewSection>
+
+                {/* Auteur(s) */}
+                {depot.auteurs.length > 0 && (
+                  <PreviewSection title="Auteur(s) / المؤلف(ون)">
+                    {depot.auteurs.map((a, i) => (
+                      <PreviewRow
+                        key={i}
+                        label={`Auteur ${i + 1}`}
+                        value={a.auteur.nomComplet_fr || a.auteur.nomComplet_ar || "—"}
+                      />
+                    ))}
+                  </PreviewSection>
+                )}
+              </>
+            )}
           </div>
-          <h1 className="text-xl font-semibold text-foreground text-center">
-            {isRenewal
-              ? "Renouvellement de dépôt / تجديد الإيداع"
-              : "Paiement du dépôt / دفع مبلغ الإيداع"}
-          </h1>
-          {depot && (
-            <div className="mt-4 w-full space-y-1 text-sm text-muted-foreground">
-              <p>
-                Numéro de dépôt:{" "}
-                <span className="font-semibold text-foreground">
-                  {depot.numeroSequentiel ?? depot.id}-{depot.oeuvre.categorie.code}-
-                  {new Date(depot.dateDepot)
-                    .toLocaleDateString("fr-FR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })
-                    .replace(/\//g, "-")}
-                </span>
-              </p>
-              <p>
-                Déposant:{" "}
-                <span className="font-semibold text-foreground">
-                  {depot.deposant.nomComplet_fr ||
-                    depot.deposant.nomComplet_ar ||
-                    depot.deposant.raisonSociale}
-                </span>
-              </p>
-              <p>
-                Oeuvre:{" "}
-                <span className="font-semibold text-foreground">
-                  {depot.oeuvre.titre_fr || depot.oeuvre.titre_ar}
-                </span>
-              </p>
-            </div>
-          )}
         </div>
 
-        {/* Invoice input */}
-        {!success && (
-          <div className="space-y-4">
-            <label className="block text-sm font-medium text-foreground">
-              Numéro de facture / رقم الفاتورة
-            </label>
-            <input
-              type="text"
-              value={invoiceNumber}
-              onChange={(e) => {
-                setInvoiceNumber(e.target.value);
-                if (error) setError("");
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Saisir le numéro de facture..."
-              className="input-field text-lg py-3 text-center tracking-wider"
-              autoFocus
-              disabled={loading}
-            />
-            {error && (
-              <p className="text-destructive text-sm font-medium text-center">
-                {error}
-              </p>
-            )}
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="btn-primary w-full py-3 text-base disabled:opacity-60"
-            >
-              {loading ? "Envoi en cours..." : "Valider"}
-            </button>
-          </div>
-        )}
+        {/* RIGHT — Invoice card */}
+        <div className="w-full md:w-1/2 flex items-center justify-center">
+          <div className="paper-form w-full max-w-lg p-8">
+            {/* Header */}
+            <div className="flex flex-col items-center mb-8">
+              <div className="flex items-center gap-3 mb-4">
+                <img
+                  src="/logo.png"
+                  alt="OTDAV"
+                  className="h-14 w-14 object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              </div>
+              <h1 className="text-xl font-semibold text-foreground text-center">
+                {isRenewal
+                  ? "Renouvellement de dépôt / تجديد الإيداع"
+                  : "Paiement du dépôt / دفع مبلغ الإيداع"}
+              </h1>
+            </div>
 
-        {/* Success state */}
-        {success && (
-          <div className="space-y-6 text-center">
-            <p className="text-green-600 font-semibold text-base">
-              {isRenewal
-                ? "Renouvellement enregistré avec succès"
-                : "Paiement enregistré avec succès"}
-            </p>
-            <button
-              onClick={isRenewal ? generateRenewalCertificate : generateCertificate}
-              className="w-full py-4 text-lg font-bold text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98]"
-              style={{ backgroundColor: "hsl(215, 60%, 22%)" }}
-            >
-              {isRenewal
-                ? "🖨️ Imprimer le certificat de renouvellement"
-                : "🖨️ Imprimer le certificat"}
-            </button>
+            {/* Facture file upload */}
+            {!success && (
+              <div className="space-y-4">
+                <label className="block text-sm font-medium text-foreground">
+                  Fichier facture / ملف الفاتورة
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="relative inline-block">
+                    <input
+                      ref={factureInputRef}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] || null;
+                        if (f && f.size > 5 * 1024 * 1024) {
+                          setFileError("Le fichier ne doit pas dépasser 5 Mo");
+                          return;
+                        }
+                        setFactureFile(f);
+                        setFileError("");
+                        if (error) setError("");
+                      }}
+                      style={{ position: "absolute", opacity: 0, width: "100%", height: "100%", top: 0, left: 0, cursor: "pointer" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => factureInputRef.current?.click()}
+                      disabled={loading}
+                      style={{
+                        background: "#1a3c6e",
+                        color: "white",
+                        borderRadius: "6px",
+                        padding: "6px 16px",
+                        fontSize: "14px",
+                        fontWeight: 500,
+                        border: "none",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Choisir un fichier / تحميل الوثيقة
+                    </button>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {factureFile ? `${factureFile.name} (${(factureFile.size / 1024).toFixed(0)} Ko)` : "Aucun fichier sélectionné"}
+                  </span>
+                </div>
+                {fileError && (
+                  <p className="text-destructive text-sm">{fileError}</p>
+                )}
+                {error && (
+                  <p className="text-destructive text-sm font-medium text-center">{error}</p>
+                )}
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="btn-primary w-full py-3 text-base disabled:opacity-60"
+                >
+                  {loading ? "Envoi en cours..." : "Valider"}
+                </button>
+              </div>
+            )}
+
+            {/* Success state */}
+            {success && (
+              <div className="space-y-6 text-center">
+                <p className="text-green-600 font-semibold text-base">
+                  {isRenewal
+                    ? "Renouvellement enregistré avec succès"
+                    : "Paiement enregistré avec succès"}
+                </p>
+                <button
+                  onClick={isRenewal ? generateRenewalCertificate : generateCertificate}
+                  className="w-full py-4 text-lg font-bold text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98]"
+                  style={{ backgroundColor: "hsl(215, 60%, 22%)" }}
+                >
+                  {isRenewal
+                    ? "🖨️ Imprimer le certificat de renouvellement"
+                    : "🖨️ Imprimer le certificat"}
+                </button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ cron.schedule('0 8 * * *', async () => {
 
   const depots = await prisma.depot.findMany({
     where: {
-      statut: { in: ['PAYE', 'CERTIFIE', 'EN_ATTENTE_RENOUVELLEMENT'] },
+      statut: { in: ['CERTIFIE', 'EN_ATTENTE_RENOUVELLEMENT'] },
       dateExpiration: { not: null }
     },
     include: {

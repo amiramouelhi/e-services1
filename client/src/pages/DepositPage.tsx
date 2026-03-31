@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { GOUVERNORATS_DATA } from "./gouvernoratsData";
 
@@ -18,6 +18,7 @@ interface FormState {
   cin: string;
   raisonSociale: string;
   registreCommerce: string;
+  representantLegal: string;
   rue: string;
   cite: string;
   gouvernorat: string;
@@ -43,6 +44,7 @@ const initialForm: FormState = {
   cin: "",
   raisonSociale: "",
   registreCommerce: "",
+  representantLegal: "",
   rue: "",
   cite: "",
   gouvernorat: "",
@@ -79,6 +81,8 @@ const translations = {
     telephone: "رقم الهاتف",
     fax: "رقم الفاكس",
     email: "البريد الإلكتروني",
+    representantLegal: "الممثل القانوني أو الوكيل",
+    errRepresentantLegal: "الممثل القانوني أو الوكيل مطلوب",
     fichierCIN: "بطاقة التعريف الوطنية",
     fichierCINMorale: "بطاقة التعريف الوطنية للممثل",
     fichierRNE: "السجل الوطني للمؤسسات",
@@ -143,6 +147,8 @@ const translations = {
     telephone: "Telephone",
     fax: "Fax",
     email: "E-mail",
+    representantLegal: "Représentant légal ou mandataire",
+    errRepresentantLegal: "Le représentant légal ou mandataire est obligatoire",
     fichierCIN: "Piece d'identite (CIN)",
     fichierCINMorale: "CIN du representant",
     fichierRNE: "RNE",
@@ -283,7 +289,7 @@ const DepositPage = () => {
     setAuteursCIN((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const showProcurationPhysique = isNon && isCoAuteur;
+  const showProcurationPhysique = isNon || isCoAuteur;
   const isImageFile = (file: File) => /\.(jpe?g|png)$/i.test(file.name);
 
   const validateStep1 = (): boolean => {
@@ -308,12 +314,15 @@ const DepositPage = () => {
       if (!form.fax.trim()) errs.fax = T.errRequired;
       if (!form.email.trim()) errs.email = T.errRequired;
       else if (!emailRegex.test(form.email.trim())) errs.email = T.errEmail;
-      if (!isOui && !isNon) errs.authorStatus = T.authorStatusError;
+      if (!isOui && !isNon && !isCoAuteur) errs.authorStatus = T.authorStatusError;
       if (!form.fichierCIN) errs.fichierCIN = T.errFichierCIN;
       if (showProcurationPhysique && !form.fichierProcuration) errs.fichierProcuration = T.errFichierProcuration;
     } else {
       if (!form.raisonSociale.trim()) errs.raisonSociale = T.errRequired;
       if (!form.registreCommerce.trim()) errs.registreCommerce = T.errRequired;
+      if (!form.representantLegal.trim()) errs.representantLegal = T.errRepresentantLegal;
+      if (!form.cin.trim()) errs.cin = T.errRequired;
+      else if (!/^\d{8}$/.test(form.cin.trim())) errs.cin = T.errCin;
       if (!form.rue.trim()) errs.rue = T.errRequired;
       if (!form.cite.trim()) errs.cite = T.errRequired;
       if (!form.gouvernorat) errs.gouvernorat = T.errRequired;
@@ -382,6 +391,7 @@ const DepositPage = () => {
     fd.append("cin", form.cin);
     fd.append("raisonSociale", form.raisonSociale);
     fd.append("registreCommerce", form.registreCommerce);
+    fd.append("representantLegal", form.representantLegal);
     fd.append("rue", form.rue);
     fd.append("cite", form.cite);
     fd.append("gouvernorat", form.gouvernorat);
@@ -603,8 +613,57 @@ const DepositPage = () => {
                 <>
                   <Field label={T.raisonSociale} value={form.raisonSociale}
                     onChange={(v) => updateField("raisonSociale", v)} error={errors.raisonSociale} required isRtl={isRtl} />
-                  <Field label={T.registreCommerce} value={form.registreCommerce}
-                    onChange={(v) => updateField("registreCommerce", v)} error={errors.registreCommerce} required isRtl={isRtl} />
+                  {/* 3-column row: Registre de commerce | Représentant légal | CIN */}
+                  <div className="flex gap-3">
+                    <div className="flex items-start gap-1.5 flex-1">
+                      <label className="text-foreground font-medium whitespace-nowrap pt-2 flex-shrink-0" style={{ fontSize: '17px' }}>
+                        {T.registreCommerce} <span className="text-destructive">*</span>
+                      </label>
+                      <div className="min-w-0 flex-1">
+                        <input
+                          type="text"
+                          value={form.registreCommerce}
+                          onChange={(e) => updateField("registreCommerce", e.target.value)}
+                          dir={detectDir(form.registreCommerce)}
+                          className={`input-field w-full ${errors.registreCommerce ? "border-destructive" : ""}`}
+                          style={{ fontSize: '14px' }}
+                        />
+                        {errors.registreCommerce && <p className="text-destructive mt-1" style={{ fontSize: '13px' }}>{errors.registreCommerce}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-1.5 flex-1">
+                      <label className="text-foreground font-medium whitespace-nowrap pt-2 flex-shrink-0" style={{ fontSize: '17px' }}>
+                        {T.representantLegal} <span className="text-destructive">*</span>
+                      </label>
+                      <div className="min-w-0 flex-1">
+                        <input
+                          type="text"
+                          value={form.representantLegal}
+                          onChange={(e) => updateField("representantLegal", e.target.value)}
+                          dir={detectDir(form.representantLegal)}
+                          className={`input-field w-full ${errors.representantLegal ? "border-destructive" : ""}`}
+                          style={{ fontSize: '14px' }}
+                        />
+                        {errors.representantLegal && <p className="text-destructive mt-1" style={{ fontSize: '13px' }}>{errors.representantLegal}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-1.5" style={{ width: '22%' }}>
+                      <label className="text-foreground font-medium whitespace-nowrap pt-2 flex-shrink-0" style={{ fontSize: '17px' }}>
+                        {T.cin} <span className="text-destructive">*</span>
+                      </label>
+                      <div className="min-w-0 flex-1">
+                        <input
+                          type="text"
+                          value={form.cin}
+                          onChange={(e) => updateField("cin", e.target.value)}
+                          dir="ltr"
+                          className={`input-field w-full ${errors.cin ? "border-destructive" : ""}`}
+                          style={{ fontSize: '14px' }}
+                        />
+                        {errors.cin && <p className="text-destructive mt-1" style={{ fontSize: '13px' }}>{errors.cin}</p>}
+                      </div>
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -698,7 +757,7 @@ const DepositPage = () => {
               <Field label={T.telephone} value={form.telephone}
                 onChange={(v) => updateField("telephone", v)} error={errors.telephone} required isRtl={isRtl} />
               <Field label={T.fax} value={form.fax}
-                onChange={(v) => updateField("fax", v)} error={errors.fax} required isRtl={isRtl} />
+                onChange={(v) => updateField("fax", v)} error={errors.fax}  isRtl={isRtl} />
               <Field label={T.email} value={form.email}
                 onChange={(v) => updateField("email", v)} error={errors.email} required isRtl={isRtl} />
 
@@ -711,7 +770,7 @@ const DepositPage = () => {
                       <input
                         type="checkbox"
                         checked={isOui}
-                        onChange={() => { setIsOui(true); setIsNon(false); }}
+                        onChange={(e) => { const checked = e.target.checked; setIsOui(checked); if (checked) { setIsNon(false); setIsCoAuteur(false); } }}
                         className="accent-primary"
                         style={{ width: '18px', height: '18px' }}
                       />
@@ -721,7 +780,7 @@ const DepositPage = () => {
                       <input
                         type="checkbox"
                         checked={isNon}
-                        onChange={() => { setIsNon(true); setIsOui(false); }}
+                        onChange={(e) => { const checked = e.target.checked; setIsNon(checked); if (checked) setIsOui(false); }}
                         className="accent-primary"
                         style={{ width: '18px', height: '18px' }}
                       />
@@ -731,7 +790,7 @@ const DepositPage = () => {
                       <input
                         type="checkbox"
                         checked={isCoAuteur}
-                        onChange={() => setIsCoAuteur(!isCoAuteur)}
+                        onChange={(e) => { const checked = e.target.checked; setIsCoAuteur(checked); if (checked) setIsOui(false); }}
                         className="accent-primary"
                         style={{ width: '18px', height: '18px' }}
                       />
@@ -756,10 +815,11 @@ const DepositPage = () => {
                       onChange={(f) => updateFile("fichierCIN", f)}
                       error={errors.fichierCIN}
                       required
+                      lang={lang}
                     />
                     {showProcurationPhysique && (
                       <FileField label={T.fichierProcuration} file={form.fichierProcuration}
-                        onChange={(f) => updateFile("fichierProcuration", f)} error={errors.fichierProcuration} required />
+                        onChange={(f) => updateFile("fichierProcuration", f)} error={errors.fichierProcuration} required lang={lang} />
                     )}
                   </div>
                 )}
@@ -772,13 +832,14 @@ const DepositPage = () => {
                       onChange={(f) => updateFile("fichierCIN", f)}
                       error={errors.fichierCIN}
                       required
+                      lang={lang}
                     />
                     <FileField label={T.fichierRNE} file={form.fichierRNE}
-                      onChange={(f) => updateFile("fichierRNE", f)} error={errors.fichierRNE} required />
+                      onChange={(f) => updateFile("fichierRNE", f)} error={errors.fichierRNE} required lang={lang} />
                     <FileField label={T.fichierProcuration} file={form.fichierProcuration}
-                      onChange={(f) => updateFile("fichierProcuration", f)} error={errors.fichierProcuration} required />
+                      onChange={(f) => updateFile("fichierProcuration", f)} error={errors.fichierProcuration} required lang={lang} />
                     <FileField label={T.fichierDossierJuridique} file={form.fichierDossierJuridique}
-                      onChange={(f) => updateFile("fichierDossierJuridique", f)} error={errors.fichierDossierJuridique} required />
+                      onChange={(f) => updateFile("fichierDossierJuridique", f)} error={errors.fichierDossierJuridique} required lang={lang} />
                   </div>
                 )}
               </div>
@@ -1132,30 +1193,55 @@ interface FileFieldProps {
   onChange: (file: File | null) => void;
   error?: string;
   required?: boolean;
+  lang: Lang;
 }
-const FileField = ({ label, file, onChange, error, required }: FileFieldProps) => (
-  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mb-1">
-    <label className="text-foreground font-medium flex-shrink-0" style={{ fontSize: '17px' }}>
-      {label} {required && <span className="text-destructive">*</span>}
-    </label>
-    <div className="flex-1">
-      <input
-        type="file"
-        accept=".pdf,.jpg,.jpeg,.png"
-        onChange={(e) => onChange(e.target.files?.[0] || null)}
-        className="text-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-border
-          file:font-medium file:bg-muted/50 file:text-foreground file:cursor-pointer
-          hover:file:bg-muted transition-colors"
-        style={{ fontSize: '14px' }}
-        dir="ltr"
-      />
-      {file && (
-        <p className="text-muted-foreground mt-1" style={{ fontSize: '13px' }}>{file.name} ({(file.size / 1024).toFixed(0)} Ko)</p>
-      )}
-      {error && <p className="text-destructive mt-1" style={{ fontSize: '13px' }}>{error}</p>}
+const FileField = ({ label, file, onChange, error, required, lang }: FileFieldProps) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const btnText = lang === "fr" ? "Choisir un fichier" : "تحميل الوثيقة";
+  const noFileText = lang === "fr" ? "Aucun fichier sélectionné" : "لم يتم اختيار ملف";
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mb-1">
+      <label className="text-foreground font-medium flex-shrink-0" style={{ fontSize: '17px' }}>
+        {label} {required && <span className="text-destructive">*</span>}
+      </label>
+      <div className="flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative inline-block">
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => onChange(e.target.files?.[0] || null)}
+              style={{ position: "absolute", opacity: 0, width: "100%", height: "100%", top: 0, left: 0, cursor: "pointer" }}
+              dir="ltr"
+            />
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              style={{
+                background: "#1a3c6e",
+                color: "white",
+                borderRadius: "6px",
+                padding: "6px 16px",
+                fontSize: "14px",
+                fontWeight: 500,
+                border: "none",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {btnText}
+            </button>
+          </div>
+          <span className="text-muted-foreground" style={{ fontSize: '13px' }}>
+            {file ? `${file.name} (${(file.size / 1024).toFixed(0)} Ko)` : noFileText}
+          </span>
+        </div>
+        {error && <p className="text-destructive mt-1" style={{ fontSize: '13px' }}>{error}</p>}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface SummaryRowProps {
   label: string;
