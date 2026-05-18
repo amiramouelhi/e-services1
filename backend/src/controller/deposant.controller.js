@@ -96,31 +96,6 @@ exports.getDeposantById = async (req, res) => {
   }
 };
 
-// SEARCH by CIN or Raison Sociale
-exports.searchDeposant = async (req, res) => {
-  try {
-    const { q } = req.query  // GET /deposants/search?q=12345678
-
-    if (!q?.trim()) {
-      return res.status(400).json({ error: "Paramètre de recherche requis" })
-    }
-
-    const deposants = await prisma.deposant.findMany({
-      where: {
-        OR: [
-          { cin: { contains: q.trim(), mode: 'insensitive' } },
-          { raisonSociale: { contains: q.trim(), mode: 'insensitive' } }
-        ]
-      }
-    })
-
-    res.json(deposants)
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
-  }
-}
-
 // UPDATE
 exports.updateDeposant = async (req, res) => {
   try {

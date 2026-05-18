@@ -344,3 +344,137 @@ exports.getYearlyRenouvellementsReport = async (req, res) => {
     res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
   }
 }
+
+// GET AUTORISATION BY ID (admin detail)
+exports.getAutorisationById = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id)
+    if (isNaN(id)) return res.status(400).json({ error: 'ID invalide' })
+
+    const autorisation = await prisma.autorisationSpectacle.findUnique({
+      where: { id },
+      include: {
+        organisateur: true,
+        spectacles: {
+          include: {
+            artistes: { include: { depenses: true } }
+          }
+        }
+      }
+    })
+
+    if (!autorisation) return res.status(404).json({ error: 'Autorisation non trouvée' })
+    res.json(autorisation)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
+  }
+}
+
+// STEP 2 — Prendre en charge le dossier (EN_COURS_EXAMEN → EN_COURS_TRAITEMENT)
+exports.prendreEnCharge = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id)
+    if (isNaN(id)) return res.status(400).json({ error: 'ID invalide' })
+
+    const existing = await prisma.autorisationSpectacle.findUnique({ where: { id } })
+    if (!existing) return res.status(404).json({ error: 'Autorisation non trouvée' })
+    if (existing.statut !== 'EN_COURS_EXAMEN') {
+      return res.status(400).json({ error: 'Le dossier n\'est plus en cours d\'examen' })
+    }
+
+    const autorisation = await prisma.autorisationSpectacle.update({
+      where: { id },
+      data: { statut: 'EN_COURS_TRAITEMENT', prisEnChargeAt: new Date() }
+    })
+    res.json({ message: 'Dossier pris en charge', autorisation })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
+  }
+}
+
+// STEP 3 — Générer la facture (EN_COURS_TRAITEMENT → EN_ATTENTE_PAIEMENT)
+exports.genererFacture = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id)
+    if (isNaN(id)) return res.status(400).json({ error: 'ID invalide' })
+
+    const existing = await prisma.autorisationSpectacle.findUnique({ where: { id } })
+    if (!existing) return res.status(404).json({ error: 'Autorisation non trouvée' })
+    if (existing.statut !== 'EN_COURS_TRAITEMENT') {
+      return res.status(400).json({ error: 'Le dossier doit être en cours de traitement' })
+    }
+
+    const autorisation = await prisma.autorisationSpectacle.update({
+      where: { id },
+      data: { statut: 'EN_ATTENTE_PAIEMENT' }
+    })
+    res.json({ message: 'Facture générée', autorisation })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
+  }
+}
+
+// STEP 4 — Délivrer l'autorisation (EN_ATTENTE_PAIEMENT → AUTORISE)
+exports.delivrerAutorisation = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id)
+    if (isNaN(id)) return res.status(400).json({ error: 'ID invalide' })
+
+    const existing = await prisma.autorisationSpectacle.findUnique({ where: { id } })
+    if (!existing) return res.status(404).json({ error: 'Autorisation non trouvée' })
+    if (existing.statut !== 'EN_ATTENTE_PAIEMENT' && existing.statut !== 'PAIEMENT_RECU') {
+      return res.status(400).json({ error: 'Le dossier n\'est pas en attente de paiement' })
+    }
+
+    const autorisation = await prisma.autorisationSpectacle.update({
+      where: { id },
+      data: { statut: 'AUTORISE', authoriseAt: new Date() }
+    })
+    res.json({ message: 'Autorisation délivrée', autorisation })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
+  }
+}
+
+// GET ALL AUTORISATIONS (admin suivi)
+exports.getAllAutorisations = async (req, res) => {
+  try {
+    const autorisations = await prisma.autorisationSpectacle.findMany({
+      orderBy: { dateCreation: 'desc' },
+      include: {
+        organisateur: { select: { nom: true } },
+        spectacles: {
+          include: {
+            artistes: { select: { id: true } }
+          }
+        }
+      }
+    })
+
+    const data = autorisations.map(a => {
+      const lieux = [...new Set(a.spectacles.map(s => s.lieuSpectacle).filter(Boolean))]
+      const natures = [...new Set(a.spectacles.map(s => s.natureManif || s.typeSpectacle).filter(Boolean))]
+      const nombreArtistes = a.spectacles.reduce((sum, s) => sum + (s.artistes?.length || 0), 0)
+      return {
+        id: a.id,
+        numero: a.numeroAutorisation,
+        createdAt: a.dateCreation,
+        statut: a.statut,
+        organisateur: a.organisateur ? { nom: a.organisateur.nom } : null,
+        lieu: lieux.join(', ') || null,
+        nombreSpectacles: a.spectacles.length || a.nombreSpectacles || 0,
+        nombreArtistes,
+        natureSpectacle: natures.join(', ') || null
+      }
+    })
+
+    res.json(data)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Une erreur est survenue. Veuillez réessayer.' })
+  }
+}

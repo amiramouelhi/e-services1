@@ -38,8 +38,9 @@ const getAmount = (row: ReportRow, monthIdx: number): number =>
   (row[`amount_${monthIdx}`] as number) || 0;
 
 const tooltipStyle = {
-  background: "white",
-  border: "1px solid hsl(215 20% 88%)",
+  background: "hsl(var(--surface))",
+  color: "hsl(var(--foreground))",
+  border: "1px solid hsl(var(--border))",
   borderRadius: "8px",
   fontSize: "13px",
   boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
@@ -267,10 +268,10 @@ const RapportsPage = () => {
     setError("");
     try {
       const [depotRes, renouvRes] = await Promise.all([
-        fetch(`http://localhost:5000/admin/rapports/yearly?year=${y}`, {
+        fetch(`${import.meta.env.VITE_API_URL}/admin/rapports/yearly?year=${y}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`http://localhost:5000/admin/rapports/yearly-renouv?year=${y}`, {
+        fetch(`${import.meta.env.VITE_API_URL}/admin/rapports/yearly-renouv?year=${y}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);

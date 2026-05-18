@@ -8,6 +8,8 @@ const oeuvreRoutes = require("./routes/oeuvre.route");
 const authRoutes = require("./routes/auth.routes");
 const depotRoutes = require("./routes/depot.routes");
 const adminRoutes = require("./routes/admin.routes");
+const autorisationRoutes = require('./routes/autorisation.routes');
+
 const app = express();
 const path = require("path");
 app.use(cors());
@@ -26,6 +28,7 @@ app.use("/auteurs", auteurRoutes);
 app.use("/oeuvres", oeuvreRoutes);
 app.use("/auth", authRoutes);
 app.use("/depots", depotRoutes);
+app.use('/autorisations', autorisationRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.get('/test-email', async (req, res) => {

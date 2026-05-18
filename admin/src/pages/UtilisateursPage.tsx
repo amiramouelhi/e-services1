@@ -29,7 +29,7 @@ const UtilisateursPage = () => {
     const token = getToken();
     if (!token) { navigate("/"); return; }
     try {
-      const res = await fetch("http://localhost:5000/admin/users", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Erreur lors du chargement des utilisateurs");
@@ -63,7 +63,7 @@ const UtilisateursPage = () => {
     setToggleError("");
 
     try {
-      const res = await fetch(`http://localhost:5000/admin/users/${userId}/permissions`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/users/${userId}/permissions`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -140,7 +140,7 @@ const UtilisateursPage = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ background: "hsl(215 45% 94%)" }}>
+                <tr style={{ background: "hsl(var(--surface-muted))" }}>
                   <th className="text-left px-5 py-3 font-semibold" style={{ color: "hsl(var(--foreground))" }}>Nom complet</th>
                   <th className="text-left px-5 py-3 font-semibold" style={{ color: "hsl(var(--foreground))" }}>Email</th>
                   <th className="text-left px-5 py-3 font-semibold" style={{ color: "hsl(var(--foreground))" }}>Date d'inscription</th>

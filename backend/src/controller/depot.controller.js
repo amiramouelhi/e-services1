@@ -276,11 +276,14 @@ exports.payerDepot = async (req, res) => {
     const dateExpiration = new Date()
     dateExpiration.setFullYear(dateExpiration.getFullYear() + 1)
 
+    const { numeroRecuPaiement } = req.body
+
     const depot = await prisma.depot.update({
       where: { id },
       data: {
         statut: "CERTIFIE",
         fichierFacture,
+        numeroRecuPaiement: numeroRecuPaiement?.trim() || null,
         numeroSequentiel, // assigned here after payment
         dateExpiration
       }

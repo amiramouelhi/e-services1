@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($zip = \"C:\\\\Users\\\\USER\\\\Desktop\\\\app-depot-OTDAV-backup-20260427-144312.zip\"; Add-Type -AssemblyName System.IO.Compression.FileSystem; $archive = [System.IO.Compression.ZipFile]::OpenRead\\($zip\\); $entries = $archive.Entries; $hasNodeModules = $entries | Where-Object { $_.FullName -match \"node_modules\" } | Select-Object -First 5; Write-Output \"Total entries: $\\($entries.Count\\)\"; Write-Output \"node_modules entries \\(first 5\\):\"; $hasNodeModules | ForEach-Object { $_.FullName }; $archive.Dispose\\(\\))",
+      "PowerShell(powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\USER\\\\Desktop\\\\app-depot OTDAV\\\\_backup-tmp.ps1\")",
+      "Bash(npx tsc *)",
+      "Bash(tee /tmp/tsc-output.txt)",
+      "Read(//tmp/**)"
+    ]
+  }
+}

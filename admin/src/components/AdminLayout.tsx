@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import otdavLogo from "../assets/otdav-logo.png";
+import { useTheme } from "../context/ThemeContext";
 
 const navItems = [
   {
@@ -28,11 +29,22 @@ const navItems = [
     path: "/dashboard/parametres",
     icon: "M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z M15 12a3 3 0 11-6 0 3 3 0 016 0z",
   },
+  {
+    label: "Organisateurs",
+    path: "/dashboard/organisateurs",
+    icon: "M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z",
+  },
+  {
+    label: "Autorisations",
+    path: "/dashboard/autorisations",
+    icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+  },
 ];
 
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (!localStorage.getItem("adminToken")) {
@@ -55,10 +67,10 @@ const AdminLayout = () => {
       {/* Sidebar */}
       <aside
         className="fixed left-0 top-0 bottom-0 w-60 flex flex-col z-40"
-        style={{ background: "hsl(215 60% 22%)" }}
+        style={{ background: "hsl(var(--sidebar))" }}
       >
         {/* Logo */}
-        <div className="px-5 py-5 flex items-center gap-3" style={{ borderBottom: "1px solid hsl(215 60% 28%)" }}>
+        <div className="px-5 py-5 flex items-center gap-3" style={{ borderBottom: "1px solid hsl(var(--sidebar-border))" }}>
           <img src={otdavLogo} alt="OTDAV" className="w-9 h-auto" />
           <div>
             <h1 className="text-sm font-bold text-white tracking-tight leading-tight">Administration</h1>
@@ -75,11 +87,11 @@ const AdminLayout = () => {
                 to={item.path}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
                 style={{
-                  background: active ? "hsl(215 60% 28%)" : "transparent",
-                  color: active ? "white" : "hsl(215 60% 70%)",
+                  background: active ? "hsl(var(--sidebar-border))" : "transparent",
+                  color: active ? "white" : "hsl(var(--sidebar-foreground))",
                 }}
                 onMouseEnter={(e) => {
-                  if (!active) e.currentTarget.style.background = "hsl(215 60% 26%)";
+                  if (!active) e.currentTarget.style.background = "hsl(var(--sidebar-hover))";
                 }}
                 onMouseLeave={(e) => {
                   if (!active) e.currentTarget.style.background = "transparent";
@@ -94,14 +106,34 @@ const AdminLayout = () => {
           })}
         </nav>
 
-        {/* Logout */}
-        <div className="px-3 pb-5" style={{ borderTop: "1px solid hsl(215 60% 28%)" }}>
+        {/* Theme toggle + Logout */}
+        <div className="px-3 pb-5" style={{ borderTop: "1px solid hsl(var(--sidebar-border))" }}>
+          <button
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Activer le mode clair" : "Activer le mode sombre"}
+            title={theme === "dark" ? "Mode clair" : "Mode sombre"}
+            className="flex items-center gap-3 w-full px-3 py-2.5 mt-3 rounded-lg text-sm font-medium transition-colors"
+            style={{ color: "hsl(var(--sidebar-foreground))" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "hsl(var(--sidebar-hover))")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            {theme === "dark" ? (
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+              </svg>
+            )}
+            {theme === "dark" ? "Mode clair" : "Mode sombre"}
+          </button>
           <button
             onClick={logout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 mt-3 rounded-lg text-sm font-medium transition-colors"
-            style={{ color: "hsl(215 60% 70%)" }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "hsl(215 60% 26%)"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+            className="flex items-center gap-3 w-full px-3 py-2.5 mt-1 rounded-lg text-sm font-medium transition-colors"
+            style={{ color: "hsl(var(--sidebar-foreground))" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "hsl(var(--sidebar-hover))")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3-3l3-3m0 0l-3-3m3 3H9" />

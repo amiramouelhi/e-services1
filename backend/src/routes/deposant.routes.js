@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const {createDeposant ,getAllDeposants,getDeposantById,searchDeposant,updateDeposant,deleteDeposant}=require("../controller/deposant.controller");
+const {createDeposant ,getAllDeposants,getDeposantById,updateDeposant,deleteDeposant}=require("../controller/deposant.controller");
 
 router.post("/",createDeposant);
 router.get("/", getAllDeposants);

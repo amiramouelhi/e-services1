@@ -65,6 +65,7 @@ const DashboardPage = () => {
   const cards: DashCard[] = [
     { ar: "إيداع المصنفات", fr: "Dépôt des Oeuvres", path: "/dashboard/depot", locked: canDepot === false },
     { ar: "الصندوق الإجتماعي و المنح الظرفية", fr: "FCS & Indemnités occasionnelles", path: "/dashboard/fcs", locked: canFCS === false },
+    { ar: "تراخيص", fr: "Autorisation", path: "/dashboard/autorisation" },
   ];
 
   return (
@@ -72,8 +73,8 @@ const DashboardPage = () => {
       <OtdavSidebar />
       <div className="flex-1 flex flex-col items-center justify-center bg-background px-6 py-8">
         <MobileHeader />
-        <div className="w-full max-w-2xl">
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-6">
+        <div className="w-full max-w-4xl">
+          <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-6">
             {cards.map((c) => (
               <CardButton key={c.path} card={c} navigate={navigate} />
             ))}
@@ -137,6 +138,46 @@ export const FcsDashboard = () => {
             <h2 className="text-xl font-bold text-foreground tracking-tight">الصندوق الإجتماعي و المنح الظرفية — FCS & Indemnités</h2>
           </div>
           <div className="flex flex-col sm:flex-row justify-center items-center gap-6">
+            {cards.map((c) => (
+              <CardButton key={c.path} card={c} navigate={navigate} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Autorisation Sub-Dashboard ─── */
+
+export const AutorisationDashboard = () => {
+  const navigate = useNavigate();
+  const cards: DashCard[] = [
+    { ar: "عروض", fr: "Spectacles", path: "/autorisation/spectacles" },
+    { ar: "موسيقى عامة", fr: "Musique générale", path: "/autorisation/musique-generale" },
+    { ar: "قاعات أفراح", fr: "Salles des fêtes", path: "/autorisation/salles-fetes" },
+    { ar: "مصحات", fr: "Cliniques", path: "/autorisation/cliniques" },
+    { ar: "مقاهي + قاعات شاي + مطاعم", fr: "Cafés + Salons de thé + Restaurants", path: "/autorisation/cafes-restaurants" },
+    { ar: "قاعات رياضة", fr: "Salles de sport", path: "/autorisation/salles-sport" },
+    { ar: "وسائل نقل", fr: "Moyens de transport", path: "/autorisation/transport" },
+    { ar: "نُزُل", fr: "Hôtels", path: "/autorisation/hotels" },
+    { ar: "إذاعات", fr: "Radios", path: "/autorisation/radios" },
+    { ar: "تلفزات", fr: "Télévisions", path: "/autorisation/televisions" },
+    { ar: "شركات ذات قيمة مضافة", fr: "Sociétés à valeur ajoutée", path: "/autorisation/societes-va" },
+    { ar: "إحصائيات", fr: "Statistiques", path: "/autorisation/statistiques" },
+  ];
+
+  return (
+    <div className="flex min-h-screen">
+      <OtdavSidebar />
+      <div className="flex-1 flex flex-col items-center justify-center bg-background px-6 py-8">
+        <MobileHeader />
+        <div className="w-full max-w-5xl">
+          <BackButton navigate={navigate} />
+          <div className="mb-8 text-center">
+            <h2 className="text-xl font-bold text-foreground tracking-tight">تراخيص — Autorisation</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 justify-items-center gap-6">
             {cards.map((c) => (
               <CardButton key={c.path} card={c} navigate={navigate} />
             ))}

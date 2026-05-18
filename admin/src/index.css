@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
   :root {
@@ -28,6 +29,47 @@
     --ring: 215 60% 22%;
 
     --radius: 0.5rem;
+
+    --surface: 0 0% 100%;
+    --surface-muted: 215 45% 94%;
+    --sidebar: 215 60% 22%;
+    --sidebar-border: 215 60% 28%;
+    --sidebar-hover: 215 60% 26%;
+    --sidebar-foreground: 215 60% 70%;
+  }
+
+  .dark {
+    --background: 215 28% 10%;
+    --foreground: 210 20% 92%;
+
+    --card: 215 25% 14%;
+    --card-foreground: 210 20% 92%;
+
+    --primary: 210 70% 60%;
+    --primary-foreground: 215 28% 10%;
+
+    --secondary: 215 25% 18%;
+    --secondary-foreground: 210 20% 92%;
+
+    --muted: 215 22% 16%;
+    --muted-foreground: 215 12% 65%;
+
+    --accent: 215 25% 22%;
+    --accent-foreground: 210 70% 75%;
+
+    --destructive: 0 60% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 215 20% 24%;
+    --input: 215 20% 28%;
+    --ring: 210 70% 60%;
+
+    --surface: 215 25% 14%;
+    --surface-muted: 215 22% 18%;
+    --sidebar: 215 30% 8%;
+    --sidebar-border: 215 25% 16%;
+    --sidebar-hover: 215 25% 18%;
+    --sidebar-foreground: 215 15% 65%;
   }
 
   * {
@@ -68,7 +110,7 @@
     border-radius: 0.5rem;
     padding: 0.625rem 0.875rem;
     font-size: 0.875rem;
-    background: white;
+    background: hsl(var(--surface));
     color: hsl(var(--foreground));
     outline: none;
     transition: all 0.15s ease;
@@ -115,11 +157,42 @@
   }
 
   .paper-form {
-    background: white;
+    background: hsl(var(--surface));
+    color: hsl(var(--foreground));
     border-radius: 0.75rem;
     border: 1px solid hsl(var(--border));
     box-shadow:
       0 1px 3px 0 rgb(0 0 0 / 0.06),
       0 4px 6px -2px rgb(0 0 0 / 0.03);
   }
+}
+
+/* Dark-mode remapping of common Tailwind palette classes used across pages.
+   Keeps page markup unchanged while making backgrounds/text adapt. */
+@layer utilities {
+  .dark .bg-white { background-color: hsl(var(--surface)) !important; }
+  .dark .bg-gray-50,
+  .dark .bg-gray-100 { background-color: hsl(var(--muted)) !important; }
+  .dark .bg-gray-200 { background-color: hsl(var(--accent)) !important; }
+  .dark .bg-slate-50,
+  .dark .bg-slate-100 { background-color: hsl(var(--muted)) !important; }
+
+  .dark .text-gray-900,
+  .dark .text-gray-800,
+  .dark .text-slate-900,
+  .dark .text-slate-800,
+  .dark .text-black { color: hsl(var(--foreground)) !important; }
+  .dark .text-gray-700,
+  .dark .text-gray-600,
+  .dark .text-slate-700,
+  .dark .text-slate-600 { color: hsl(var(--foreground) / 0.85) !important; }
+  .dark .text-gray-500,
+  .dark .text-gray-400,
+  .dark .text-slate-500,
+  .dark .text-slate-400 { color: hsl(var(--muted-foreground)) !important; }
+
+  .dark .border-gray-200,
+  .dark .border-gray-300,
+  .dark .border-slate-200,
+  .dark .border-slate-300 { border-color: hsl(var(--border)) !important; }
 }

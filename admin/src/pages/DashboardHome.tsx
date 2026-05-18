@@ -58,7 +58,7 @@ const DashboardHome = () => {
     const token = localStorage.getItem("adminToken");
     if (!token) { navigate("/"); return; }
     try {
-      const res = await fetch("http://localhost:5000/admin/depots", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/depots`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Erreur lors du chargement des donnees");
@@ -159,7 +159,7 @@ const DashboardHome = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr style={{ background: "hsl(215 45% 94%)" }}>
+                  <tr style={{ background: "hsl(var(--surface-muted))" }}>
                     <th className="text-left px-5 py-3 font-semibold" style={{ color: "hsl(var(--foreground))" }}>ID</th>
                     <th className="text-left px-5 py-3 font-semibold" style={{ color: "hsl(var(--foreground))" }}>Deposant</th>
                     <th className="text-left px-5 py-3 font-semibold" style={{ color: "hsl(var(--foreground))" }}>Titre</th>
@@ -246,13 +246,14 @@ const DashboardHome = () => {
                   />
                   <Tooltip
                     contentStyle={{
-                      background: "white",
-                      border: "1px solid hsl(215 20% 88%)",
+                      background: "hsl(var(--surface))",
+                      color: "hsl(var(--foreground))",
+                      border: "1px solid hsl(var(--border))",
                       borderRadius: "8px",
                       fontSize: "13px",
                       boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                     }}
-                    labelStyle={{ fontWeight: 600, color: "#1a3c6e" }}
+                    labelStyle={{ fontWeight: 600, color: "hsl(var(--foreground))" }}
                     formatter={(value) => [value, "Depots"]}
                   />
                   <Bar dataKey="depots" fill="#1a3c6e" radius={[4, 4, 0, 0]} />

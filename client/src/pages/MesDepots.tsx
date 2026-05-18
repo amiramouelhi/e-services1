@@ -56,7 +56,7 @@ const MesDepotsPage = () => {
       return;
     }
 
-    fetch("http://localhost:5000/depots/mes-depots", {
+    fetch(`${import.meta.env.VITE_API_URL}/depots/mes-depots`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {

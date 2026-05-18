@@ -36,7 +36,7 @@ const ParametresPage = () => {
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/admin/parametres/password", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/parametres/password`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

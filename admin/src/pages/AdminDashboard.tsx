@@ -87,7 +87,7 @@ const AdminDashboard = () => {
     const token = getToken();
     if (!token) { navigate("/"); return; }
     try {
-      const res = await fetch("http://localhost:5000/admin/depots", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/depots`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Erreur lors du chargement");
@@ -118,7 +118,7 @@ const AdminDashboard = () => {
     setActionLoading(true);
     setActionError("");
     try {
-      const res = await fetch(`http://localhost:5000/admin/depots/${id}/accepter`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/depots/${id}/accepter`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -138,7 +138,7 @@ const AdminDashboard = () => {
     setActionLoading(true);
     setActionError("");
     try {
-      const res = await fetch(`http://localhost:5000/admin/depots/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/depots/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -159,7 +159,7 @@ const AdminDashboard = () => {
     setActionLoading(true);
     setActionError("");
     try {
-      const res = await fetch(`http://localhost:5000/admin/depots/${id}/rejeter`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/admin/depots/${id}/rejeter`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -272,7 +272,7 @@ const AdminDashboard = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr style={{ background: "hsl(215 45% 94%)" }}>
+                  <tr style={{ background: "hsl(var(--surface-muted))" }}>
                     <th className="text-left px-5 py-3 font-semibold" style={{ color: "hsl(var(--foreground))" }}>ID</th>
                     <th className="text-left px-5 py-3 font-semibold" style={{ color: "hsl(var(--foreground))" }}>Deposant</th>
                     <th className="text-left px-5 py-3 font-semibold" style={{ color: "hsl(var(--foreground))" }}>Titre</th>
@@ -665,7 +665,7 @@ const DocLink = ({ label, filename }: { label: string; filename: string | null }
         {label} :
       </span>
       <a
-        href={`http://localhost:5000/uploads/documents/${filename}`}
+        href={`${import.meta.env.VITE_API_URL}/uploads/documents/${filename}`}
         target="_blank"
         rel="noopener noreferrer"
         className="text-sm underline transition-colors"

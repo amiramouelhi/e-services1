@@ -7,20 +7,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Statut { 
+enum Statut {
   CERTIFIE
   EN_ATTENTE_RENOUVELLEMENT
 }
 
+enum AutorisationStatut {
+  EN_COURS_EXAMEN
+  EN_COURS_TRAITEMENT
+  EN_ATTENTE_PAIEMENT
+  PAIEMENT_RECU
+  AUTORISE
+}
+
 model User {
-  id        Int      @id @default(autoincrement())
-  fullName  String
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  canDepot  Boolean  @default(false)
-  canFCS    Boolean  @default(false)
-  depots    Depot[]
+  id                        Int       @id @default(autoincrement())
+  fullName                  String
+  email                     String    @unique
+  password                  String
+  createdAt                 DateTime  @default(now())
+  canDepot                  Boolean   @default(false)
+  canFCS                    Boolean   @default(false)
+  emailVerified              Boolean   @default(false)
+  verificationCode           String?
+  verificationCodeExpiresAt  DateTime?
+  passwordResetCode          String?
+  passwordResetCodeExpiresAt DateTime?
+  depots                     Depot[]
 }
 
 model Admin {
@@ -87,6 +100,87 @@ model Oeuvre {
   depots         Depot[]
 }
 
+model Organisateur {
+  id             Int      @id @default(autoincrement())
+  nom            String
+  mf             String?
+  rne            String?
+  adresse        String?
+  telephone      String?
+  fax            String?
+  email          String?
+  nomResponsable String?
+  createdAt      DateTime @default(now())
+
+  autorisations AutorisationSpectacle[]
+}
+
+model AutorisationSpectacle {
+  id                    Int       @id @default(autoincrement())
+  numeroAutorisation    String?
+  dateDemande           DateTime?
+  isOrganisateur        Boolean   @default(false)
+  sfat                  String?
+  hasArtistesEtrangers  Boolean   @default(false)
+  dateCommission        DateTime?
+  pvCommission          String?
+  nombreSpectacles      Int       @default(1)
+  fichierFacture        String?
+  numeroFacture         String?   // ← add this
+  dateCreation          DateTime  @default(now())
+  statut                AutorisationStatut @default(EN_COURS_EXAMEN)
+  prisEnChargeAt        DateTime?
+  paiementProofUrl      String?
+  paiementRecuAt        DateTime?
+  authoriseAt           DateTime?
+
+  organisateurId        Int?
+  organisateur          Organisateur? @relation(fields: [organisateurId], references: [id])
+
+  spectacles            Spectacle[]
+}
+
+model Spectacle {
+  id               Int       @id @default(autoincrement())
+  categorieSpectacle String?
+titreSpectacle     String?
+espaceSpectacle    String?
+  dateSpectacle    DateTime
+  horaireSpectacle String?
+  lieuSpectacle    String
+  typeSpectacle    String    // 'individuel' or 'manifestation'
+  budget           Decimal?
+  natureManif      String?   // 'locale', 'regionale', 'nationale', 'internationale'
+  hasEtrangers     Boolean?
+
+  autorisationId   Int
+  autorisation     AutorisationSpectacle @relation(fields: [autorisationId], references: [id], onDelete: Cascade)
+
+  artistes         Artiste[]
+}
+
+model Artiste {
+  id          Int     @id @default(autoincrement())
+  nom         String
+  nationalite String  // 'tunisienne' or 'autre'
+  pays        String?
+  identite    String? // file path
+
+  spectacleId Int
+  spectacle   Spectacle @relation(fields: [spectacleId], references: [id], onDelete: Cascade)
+
+  depenses    Depense[]
+}
+
+model Depense {
+  id       Int     @id @default(autoincrement())
+  type     String
+  montant  Decimal @default(0)
+  fichier  String? // file path
+
+  artisteId Int
+  artiste   Artiste @relation(fields: [artisteId], references: [id], onDelete: Cascade)
+}
 
 model Depot {
   id                         Int       @id @default(autoincrement())
