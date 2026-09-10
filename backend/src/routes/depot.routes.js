@@ -20,6 +20,8 @@ router.get("/mes-depots",       authMiddleware, controller.getMesDepots);
 router.get("/search", authMiddleware, controller.searchDepots);
 router.get("/:id",              authMiddleware, controller.getDepotById);
 router.delete("/:id",           authMiddleware, controller.deleteDepot);
-router.put("/:id/payer", authMiddleware, controller.payerDepot);
+router.put("/:id/payer", authMiddleware, upload.fields([
+  { name: 'fichierFacture', maxCount: 1 }
+]), controller.payerDepot);
 router.put("/:id/renouveler", authMiddleware, upload.fields([{ name: "fichierDemandeRenouvellement", maxCount: 1 }]), controller.renouvelerDepot);
 module.exports = router;

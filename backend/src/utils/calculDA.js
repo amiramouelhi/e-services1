@@ -513,10 +513,11 @@ const generateCalculDA = async (autorisationId) => {
 
   const html = buildHtml(autorisation)
 
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  })
+const browser = await puppeteer.launch({
+  headless: true,
+  executablePath: 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+  args: ['--no-sandbox', '--disable-setuid-sandbox']
+})
   try {
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'networkidle0' })

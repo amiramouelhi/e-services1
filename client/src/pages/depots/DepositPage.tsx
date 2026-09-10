@@ -311,7 +311,6 @@ const DepositPage = () => {
       else if (!postalRegex.test(form.codePostal.trim())) errs.codePostal = T.errCodePostal;
       if (!form.telephone.trim()) errs.telephone = T.errRequired;
       else if (!digitRegex.test(form.telephone.trim())) errs.telephone = T.errTelephone;
-      if (!form.fax.trim()) errs.fax = T.errRequired;
       if (!form.email.trim()) errs.email = T.errRequired;
       else if (!emailRegex.test(form.email.trim())) errs.email = T.errEmail;
       if (!isOui && !isNon && !isCoAuteur) errs.authorStatus = T.authorStatusError;
